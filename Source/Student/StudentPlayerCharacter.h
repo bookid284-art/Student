@@ -9,6 +9,7 @@ class UCameraComponent;
 class UInputAction;
 class UInputMappingContext;
 class UInputComponent;
+class UStudentInteractionComponent;
 
 /**
  * First-person player character for the Student demo.
@@ -50,6 +51,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* CrouchAction;
 
+	/** Interact input action (triggered by E). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* InteractAction;
+
+	/** Generic interaction component used for first-person line trace interaction. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UStudentInteractionComponent* InteractionComponent;
+
 	/** Default walk speed. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Speed", meta = (ClampMin = "0.0"))
 	float WalkSpeed;
@@ -69,4 +78,5 @@ private:
 	void StopRun();
 	void StartCrouch();
 	void StopCrouch();
+	void TryInteract();
 };
