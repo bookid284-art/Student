@@ -3,6 +3,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "EnhancedInputComponent.h"
+#include "StudentInteractionComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -33,6 +34,10 @@ AStudentPlayerCharacter::AStudentPlayerCharacter()
 
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed;
+
+	InteractionComponent = CreateDefaultSubobject<UStudentInteractionComponent>(TEXT("InteractionComponent"));
+
+	InteractAction = nullptr;
 }
 
 void AStudentPlayerCharacter::BeginPlay()
@@ -84,6 +89,11 @@ void AStudentPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 			EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AStudentPlayerCharacter::StopCrouch);
 			EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Canceled, this, &AStudentPlayerCharacter::StopCrouch);
 		}
+
+		if (InteractAction)
+		{
+			EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AStudentPlayerCharacter::TryInteract);
+		}
 	}
 }
 
@@ -132,4 +142,12 @@ void AStudentPlayerCharacter::StopCrouch()
 {
 	UnCrouch();
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AStudentPlayerCharacter::TryInteract()
+{
+	if (InteractionComponent)
+	{
+		InteractionComponent->TryInteract();
+	}
 }
