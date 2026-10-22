@@ -13,12 +13,12 @@ UStudentInteractionComponent::UStudentInteractionComponent()
 	bDrawDebugTrace = false;
 }
 
-void UStudentInteractionComponent::TryInteract()
+bool UStudentInteractionComponent::TraceForward(FHitResult& OutHit) const
 {
 	AActor* Owner = GetOwner();
-	if (!Owner)
+	if (!Owner || !GetWorld())
 	{
-		return;
+		return false;
 	}
 
 	FVector ViewLocation;
@@ -29,26 +29,32 @@ void UStudentInteractionComponent::TryInteract()
 	const FVector TraceEnd = TraceStart + (ViewRotation.Vector() * InteractionDistance);
 
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(StudentInteractionTrace), false, Owner);
-
-	FHitResult HitResult;
-	const bool bHasHit = GetWorld() && GetWorld()->LineTraceSingleByChannel(
-		HitResult,
+	const bool bHasHit = GetWorld()->LineTraceSingleByChannel(
+		OutHit,
 		TraceStart,
 		TraceEnd,
 		ECC_Visibility,
 		QueryParams);
 
-	if (bDrawDebugTrace && GetWorld())
+	if (bDrawDebugTrace)
 	{
-		const FVector DebugEnd = bHasHit ? HitResult.ImpactPoint : TraceEnd;
-		DrawDebugLine(GetWorld(), TraceStart, DebugEnd, bHasHit ? FColor::Green : FColor::Red, false, 1.0f, 0, 1.0f);
+		const FVector DebugEnd = bHasHit ? OutHit.ImpactPoint : TraceEnd;
+		DrawDebugLine(GetWorld(), TraceStart, DebugEnd, bHasHit ? FColor::Green : FColor::Red, false, 0.05f, 0, 1.0f);
 		if (bHasHit)
 		{
-			DrawDebugPoint(GetWorld(), HitResult.ImpactPoint, 8.0f, FColor::Yellow, false, 1.0f);
+			DrawDebugPoint(GetWorld(), OutHit.ImpactPoint, 8.0f, FColor::Yellow, false, 0.05f);
 		}
 	}
 
-	if (!bHasHit)
+	return bHasHit;
+}
+
+void UStudentInteractionComponent::RefreshFocus()
+{
+	FocusedActor = nullptr;
+
+	FHitResult HitResult;
+	if (!TraceForward(HitResult))
 	{
 		return;
 	}
@@ -56,6 +62,31 @@ void UStudentInteractionComponent::TryInteract()
 	AActor* HitActor = HitResult.GetActor();
 	if (HitActor && HitActor->GetClass()->ImplementsInterface(UStudentInteractableInterface::StaticClass()))
 	{
-		IStudentInteractableInterface::Execute_Interact(HitActor, Owner);
+		FocusedActor = HitActor;
+	}
+}
+
+AActor* UStudentInteractionComponent::GetFocusedActor() const
+{
+	return FocusedActor.Get();
+}
+
+void UStudentInteractionComponent::SetInteractionDistance(float InDistance)
+{
+	InteractionDistance = FMath::Max(0.f, InDistance);
+}
+
+void UStudentInteractionComponent::TryInteract()
+{
+	FHitResult HitResult;
+	if (!TraceForward(HitResult))
+	{
+		return;
+	}
+
+	AActor* HitActor = HitResult.GetActor();
+	if (HitActor && HitActor->GetClass()->ImplementsInterface(UStudentInteractableInterface::StaticClass()))
+	{
+		IStudentInteractableInterface::Execute_Interact(HitActor, GetOwner());
 	}
 }
