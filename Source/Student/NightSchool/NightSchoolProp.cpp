@@ -79,6 +79,36 @@ void ANightSchoolProp::OpenDoor()
 	SetActorEnableCollision(false);
 }
 
+void ANightSchoolProp::CloseDoor()
+{
+	if (!bDoor || !bDoorOpen)
+	{
+		return;
+	}
+	bDoorOpen = false;
+	bSlideDone = false;
+	SetActorLocation(ClosedLocation);
+	SetActorEnableCollision(true);
+	SetActorTickEnabled(true);
+}
+
+void ANightSchoolProp::Revive()
+{
+	if (!bConsumed)
+	{
+		return;
+	}
+	bConsumed = false;
+	bAvailable = true;
+	SetActorHiddenInGame(false);
+	SetActorEnableCollision(true);
+}
+
+void ANightSchoolProp::SetMarker(FName InMarker)
+{
+	Marker = InMarker;
+}
+
 void ANightSchoolProp::Consume()
 {
 	bConsumed = true;

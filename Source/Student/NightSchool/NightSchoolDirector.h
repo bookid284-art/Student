@@ -19,6 +19,114 @@ struct FNightRoomView
 	FString Name;
 	bool bSeen = false;
 };
+
+/** 印台记下的进度。解不开就退回这里，不是另一种结局。 */
+struct FNightSave
+{
+	bool bValid = false;
+	FVector Location = FVector::ZeroVector;
+	FRotator View = FRotator::ZeroRotator;
+	float Battery = 100.f;
+	float Stamina = 3.6f;
+	float Fear = 0.f;
+	bool bCrouched = false;
+	bool bLightOn = false;
+	FString RoomName;
+	bool bPhoneRead = false;
+	bool bHasEarplugs = false;
+	bool bWearingEarplugs = false;
+	bool bHasCloth = false;
+	bool bCameraCovered = false;
+	bool bHallOpen = false;
+	bool bHasSoda = false;
+	bool bSatAlone = false;
+	bool bHasExam = false;
+	bool bExamGiven = false;
+	bool bOfficeOpen = false;
+	bool bTeacherRead = false;
+	bool bInfirmaryOpen = false;
+	bool bZhouHeard = false;
+	bool bLightOpen = false;
+	bool bClosetOpen = false;
+	bool bGhostsSpawned = false;
+	bool bPressureWarned = false;
+	bool bDutyA = false;
+	bool bDutyB = false;
+	bool bDutyC = false;
+	bool bCoin = false;
+	bool bCoinSpent = false;
+	bool bNoteSeat = false;
+	bool bNoteHall = false;
+	bool bNoteShop = false;
+	bool bNoteLocker = false;
+	bool bShopOpen = false;
+	bool bLedgerHeld = false;
+	bool bLedgerPosted = false;
+	bool bGradeOpen = false;
+	bool bMinSun = false;
+	bool bMinLiang = false;
+	bool bMinParent = false;
+	bool bNoticeA = false;
+	bool bNoticeB = false;
+	bool bNoticeC = false;
+	bool bNoticeD = false;
+	bool bNoticeE = false;
+	bool bNoticeF = false;
+	bool bNoticeG = false;
+	bool bNoticeH = false;
+	bool bHasPencil = false;
+	bool bHasBus = false;
+	bool bHasTime = false;
+	bool bItemsReturned = false;
+	bool bZhouIntro = false;
+	bool bComputerOpen = false;
+	bool bEssayDorm = false;
+	bool bEssayShop = false;
+	bool bEssayGrade = false;
+	bool bEssaysKept = false;
+	bool bShopGhost = false;
+	bool bNoticeGhost = false;
+	bool bComputerGhost = false;
+	bool bShopSodaTaken = false;
+	bool bSpareTaken = false;
+	bool bCallA = false;
+	bool bCallB = false;
+	bool bCallC = false;
+	bool bClassA = false;
+	bool bClassB = false;
+	bool bClassC = false;
+	bool bReceiptA = false;
+	bool bReceiptB = false;
+	bool bReceiptC = false;
+	bool bDraftA = false;
+	bool bDraftB = false;
+	bool bDraftC = false;
+	bool bChartA = false;
+	bool bChartB = false;
+	bool bChartC = false;
+	bool bSeal1Held = false;
+	bool bSeal1Set = false;
+	bool bSeal2Held = false;
+	bool bSeal2Set = false;
+	bool bSeal3Held = false;
+	bool bSeal3Set = false;
+	bool bSeal4Held = false;
+	bool bSeal4Set = false;
+	bool bSeal5Held = false;
+	bool bSeal5Set = false;
+	bool bStoreOpen = false;
+	bool bAnnexOpen = false;
+	bool bAnnexGhost = false;
+	bool bSawSelf = false;
+	bool bPuzzle1 = false;
+	bool bPuzzle2 = false;
+	bool bPuzzle3 = false;
+	bool bPuzzle4 = false;
+	bool bPuzzle5 = false;
+	bool bPuzzle6 = false;
+	TArray<uint8> Consumed;
+	TArray<uint8> OpenDoors;
+};
 class UAudioComponent;
 class USceneComponent;
 class USoundWaveProcedural;
@@ -45,6 +153,7 @@ public:
 	bool IsEnding() const { return CurrentEnding != ENightEnding::None; }
 	void SkipPreview();
 	bool IsWearingEarplugs() const { return bWearingEarplugs; }
+	bool IsPuzzleActive() const { return ActivePuzzle >= 0; }
 	bool GetLurePoint(const FBox& Room, FVector& OutPoint) const;
 	const FString& GetNoteTitle() const { return NoteTitle; }
 	const FString& GetNoteBody() const { return NoteBody; }
@@ -56,6 +165,7 @@ public:
 	FString GetObjective() const;
 	FString GetChapterLine() const;
 	FString GetPreviewLine() const;
+	FString GetPuzzleLine() const;
 	FString GetFacingLine() const;
 	FString GetThreadsLine() const;
 	FString GetItemsLine() const;
@@ -72,8 +182,9 @@ private:
 	void AddLantern(float X, float Y, float Z, float Intensity, bool bCalm);
 	void AddSprite(const FVector& Location, float Yaw, UTexture2D* Texture, float WidthCm, float HeightCm);
 	ANightSchoolProp* SpawnProp(ENightPropId Id, const FVector& Location, const FVector& Extent, const FLinearColor& Color, const FText& Prompt, const FVector& Slide, float LabelYaw, const FString& Label);
+	ANightSchoolApparition* SpawnGhost(const FBox& Room, const TArray<FVector>& Points, const FString& Glyph);
 	ANightSchoolProp* FindProp(ENightPropId Id) const;
-	void SpawnGhost(const FBox& Room, const TArray<FVector>& Points, const FString& Glyph);
+	ANightSchoolProp* FindMarked(FName Marker) const;
 	FBox HallRoom() const;
 	FBox ClassRoom() const;
 	bool IsInDorm(const FVector& Location) const;
@@ -102,6 +213,24 @@ private:
 	void TickPreview(float DeltaSeconds);
 	void TryBeginPreview();
 	void BeginRoomPreview(FNightRoomView& Room);
+	void BuildCheckpoints();
+	void EnsureOpeningCheckpoint();
+	void CaptureCheckpoint(const FString& RoomName, const FVector& Location);
+	void RestoreCheckpoint();
+	void TickPuzzle(float DeltaSeconds);
+	void UseInkPad(ANightSchoolProp* Prop);
+	void UseDial(ANightSchoolProp* Prop);
+	void UseDialConfirm(ANightSchoolProp* Prop);
+	bool PuzzleReady(int32 Index) const;
+	bool IsPuzzleDone(int32 Index) const;
+	void SetPuzzleDone(int32 Index);
+	void BeginPuzzle(int32 Index);
+	void FinishPuzzle(int32 Index);
+	void FailPuzzle();
+	void SpawnPuzzleChaser(int32 Index);
+	void ClearPuzzleChaser();
+	void RebuildGhosts(bool bHall, bool bShop, bool bNotice, bool bComputer, bool bAnnex);
+	const TCHAR* PuzzleLockedText(int32 Index) const;
 
 	void ShowNote(const TCHAR* InTitle, const TCHAR* InBody);
 	void ShowStatus(const FString& Line, float Seconds);
@@ -246,6 +375,20 @@ private:
 	bool bSawSelf = false;
 	bool bPreviewing = false;
 	bool bPreviewReturning = false;
+	bool bPuzzle1 = false;
+	bool bPuzzle2 = false;
+	bool bPuzzle3 = false;
+	bool bPuzzle4 = false;
+	bool bPuzzle5 = false;
+	bool bPuzzle6 = false;
+
+	FNightSave Checkpoint;
+	int32 ActivePuzzle = -1;
+	float PuzzleTime = 0.f;
+	int32 Dials[6][3] = {};
+
+	UPROPERTY()
+	TObjectPtr<ANightSchoolApparition> PuzzleGhost;
 
 	TArray<FNightRoomView> RoomViews;
 	TArray<FVector> PreviewPoints;

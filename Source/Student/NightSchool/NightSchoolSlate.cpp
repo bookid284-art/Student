@@ -108,7 +108,7 @@ public:
 					.Font(SmallFont)
 					.ColorAndOpacity(FLinearColor(0.62f, 0.58f, 0.5f))
 					.Justification(ETextJustify::Center)
-					.Text(FText::FromString(TEXT("WASD 移动    鼠标 环顾    Shift 跑    Ctrl 蹲    E 交互    F 那点光    Q 合上或跳过看房")))
+					.Text(FText::FromString(TEXT("WASD 移动    鼠标 环顾    Q 左倾    E 右倾    G 交互    F 那点光    Tab 合上或跳过看房")))
 				]
 			]
 			+ SOverlay::Slot()
@@ -148,7 +148,7 @@ public:
 							SNew(STextBlock)
 							.Font(SmallFont)
 							.ColorAndOpacity(Dim)
-							.Text(FText::FromString(TEXT("按 Q 合上")))
+							.Text(FText::FromString(TEXT("按 Tab 合上")))
 						]
 					]
 				]
@@ -263,7 +263,13 @@ public:
 			*Director->GetFacingLine(),
 			*Director->GetThreadsLine(),
 			*Director->GetItemsLine())));
-		ObjectiveText->SetText(FText::FromString(Director->GetObjective()));
+		FString Objective = Director->GetObjective();
+		const FString PuzzleLine = Director->GetPuzzleLine();
+		if (!PuzzleLine.IsEmpty())
+		{
+			Objective = PuzzleLine + TEXT("\n") + Objective;
+		}
+		ObjectiveText->SetText(FText::FromString(Objective));
 		StatusText->SetText(FText::FromString(Director->GetStatusLine()));
 
 		FText Prompt;
@@ -276,10 +282,23 @@ public:
 		}
 		if (PromptText.IsValid())
 		{
-			PromptText->SetText(Prompt.IsEmpty() ? FText::GetEmpty() : FText::FromString(FString::Printf(TEXT("按 E    %s"), *Prompt.ToString())));
+			PromptText->SetText(Prompt.IsEmpty() ? FText::GetEmpty() : FText::FromString(FString::Printf(TEXT("按 G    %s"), *Prompt.ToString())));
 		}
 		if (Crosshair.IsValid())
 		{
+			const float Lean = Player->GetLean();
+			if (Lean < -0.35f)
+			{
+				Crosshair->SetText(FText::FromString(TEXT("‹")));
+			}
+			else if (Lean > 0.35f)
+			{
+				Crosshair->SetText(FText::FromString(TEXT("›")));
+			}
+			else
+			{
+				Crosshair->SetText(FText::FromString(TEXT("·")));
+			}
 			Crosshair->SetColorAndOpacity(Prompt.IsEmpty() ? FLinearColor(0.7f, 0.66f, 0.58f, 0.45f) : FLinearColor(0.95f, 0.55f, 0.4f, 0.95f));
 		}
 

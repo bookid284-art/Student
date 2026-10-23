@@ -96,5 +96,8 @@ enum class ENightPropId : uint8
 	StampClass,
 	StampDorm,
 	LureAnnex,
-	SelfFigure
+	SelfFigure,
+	InkPad,
+	Dial,
+	DialConfirm
 };
