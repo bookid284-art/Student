@@ -115,7 +115,7 @@ ANightSchoolCharacter* ANightSchoolApparition::FindPlayer() const
 
 bool ANightSchoolApparition::CanSeePlayer(ANightSchoolCharacter* Player) const
 {
-	if (!Player || Player->IsEnded() || Player->IsReading())
+	if (!Player || Player->IsEnded() || Player->IsReading() || Player->IsPreviewing())
 	{
 		return false;
 	}
@@ -157,13 +157,13 @@ void ANightSchoolApparition::NotifyActorBeginOverlap(AActor* OtherActor)
 {
 	Super::NotifyActorBeginOverlap(OtherActor);
 	ANightSchoolCharacter* Player = Cast<ANightSchoolCharacter>(OtherActor);
-	if (!Player || Player->IsEnded() || Player->IsReading() || HitCooldown > 0.f || StunRemaining > 0.f)
+	if (!Player || Player->IsEnded() || Player->IsReading() || Player->IsPreviewing() || HitCooldown > 0.f || StunRemaining > 0.f)
 	{
 		return;
 	}
 	if (ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld()))
 	{
-		if (Director->IsEnding() || Director->IsNoteOpen())
+		if (Director->IsEnding() || Director->IsNoteOpen() || Director->IsPreviewing())
 		{
 			return;
 		}
@@ -183,7 +183,7 @@ void ANightSchoolApparition::Tick(float DeltaSeconds)
 	StunRemaining = FMath::Max(0.f, StunRemaining - DeltaSeconds);
 
 	ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld());
-	if (Director && (Director->IsEnding() || Director->IsNoteOpen()))
+	if (Director && (Director->IsEnding() || Director->IsNoteOpen() || Director->IsPreviewing()))
 	{
 		return;
 	}

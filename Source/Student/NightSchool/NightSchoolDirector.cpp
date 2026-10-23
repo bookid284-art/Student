@@ -6,7 +6,11 @@
 #include "Components/PointLightComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Math/NumericLimits.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
 #include "Engine/DirectionalLight.h"
+#include "GameFramework/PlayerController.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/PointLight.h"
@@ -289,8 +293,11 @@ void ANightSchoolDirector::BuildWorld()
 	BuildStructure();
 	BuildDressing();
 	BuildLights();
+	BuildRooms();
+	BuildSelfFigure();
 	BuildAudio();
-	ShowStatus(TEXT("高三。住宿。手机在西边的宿舍里亮着。"), 12.f);
+	PreviewHold = 1.1f;
+	ShowStatus(TEXT("第一章。手机在西边的宿舍里亮着。这间屋一共六章。"), 12.f);
 	bWorldBuilt = true;
 	UE_LOG(LogStudent, Log, TEXT("里屋：幻觉已经搭好。"));
 }
@@ -308,9 +315,9 @@ void ANightSchoolDirector::BuildShell()
 	FRandomStream Stars(20261023);
 	for (int32 Index = 0; Index < 36; ++Index)
 	{
-		const float X = Stars.FRandRange(-1600.f, 1600.f);
-		const float Y = Stars.FRandRange(-1200.f, 3000.f);
-		if (X > -1300.f && X < 2300.f && Y > -1500.f && Y < 2100.f)
+		const float X = Stars.FRandRange(-2300.f, 2300.f);
+		const float Y = Stars.FRandRange(-1600.f, 3400.f);
+		if (X > -2250.f && X < 2360.f && Y > -1450.f && Y < 2750.f)
 		{
 			continue;
 		}
@@ -342,7 +349,12 @@ void ANightSchoolDirector::BuildStructure()
 	WallY(-600.f, -1100.f, -775.f);
 	WallY(-600.f, -625.f, 300.f);
 	LintelY(-600.f, -700.f);
-	WallX(-1100.f, -1400.f, 800.f);
+	WallX(-1100.f, -1400.f, -1075.f);
+	WallX(-1100.f, -925.f, 800.f);
+	LintelX(-1100.f, -1000.f);
+	WallX(-2200.f, -1400.f, -600.f);
+	WallY(-1400.f, -2200.f, -1100.f);
+	WallY(-600.f, -2200.f, -1100.f);
 	WallY(-1400.f, -1100.f, 300.f);
 	WallX(300.f, -1400.f, -600.f);
 	WallX(-350.f, -1400.f, -1075.f);
@@ -361,9 +373,12 @@ void ANightSchoolDirector::BuildStructure()
 	WallX(1200.f, 0.f, 325.f);
 	WallX(1200.f, 475.f, 800.f);
 	LintelX(1200.f, 400.f);
-	WallX(2000.f, 0.f, 800.f);
-	WallY(0.f, 1200.f, 2000.f);
-	WallY(800.f, 1200.f, 2200.f);
+	WallX(2000.f, 0.f, 325.f);
+	WallX(2000.f, 475.f, 800.f);
+	LintelX(2000.f, 400.f);
+	WallX(2320.f, 0.f, 800.f);
+	WallY(0.f, 1200.f, 2320.f);
+	WallY(800.f, 1200.f, 2320.f);
 	WallY(800.f, -1100.f, -775.f);
 	WallY(800.f, -625.f, -300.f);
 	LintelY(800.f, -700.f);
@@ -383,8 +398,12 @@ void ANightSchoolDirector::BuildStructure()
 	WallY(1400.f, 900.f, 1125.f);
 	WallY(1400.f, 1275.f, 2200.f);
 	LintelY(1400.f, 1200.f);
-	WallY(1900.f, 900.f, 2200.f);
-	WallX(2200.f, 1400.f, 1900.f);
+	WallY(1900.f, 900.f, 1525.f);
+	WallY(1900.f, 1675.f, 2200.f);
+	LintelY(1900.f, 1600.f);
+	WallX(2200.f, 1400.f, 2700.f);
+	WallX(900.f, 1900.f, 2700.f);
+	WallY(2700.f, 900.f, 2200.f);
 	WallY(1400.f, 300.f, 525.f);
 	WallY(1400.f, 675.f, 900.f);
 	LintelY(1400.f, 600.f);
@@ -416,6 +435,9 @@ void ANightSchoolDirector::BuildStructure()
 	AddBox(W(1250.f, 1100.f, 314.f), FVector(660.f, 560.f, 16.f), Ceiling, true, true);
 	AddBox(W(1900.f, 1100.f, 314.f), FVector(560.f, 560.f, 16.f), Ceiling, true, true);
 	AddBox(W(1550.f, 1650.f, 314.f), FVector(1260.f, 460.f, 16.f), Ceiling, true, true);
+	AddBox(W(-1650.f, -1000.f, 314.f), FVector(1060.f, 760.f, 16.f), Ceiling, true, true);
+	AddBox(W(2160.f, 400.f, 314.f), FVector(280.f, 760.f, 16.f), Ceiling, true, true);
+	AddBox(W(1550.f, 2300.f, 314.f), FVector(1260.f, 760.f, 16.f), Ceiling, true, true);
 
 	const FLinearColor FloorWood(0.16f, 0.08f, 0.04f);
 	AddBox(W(-400.f, -300.f, 43.f), FVector(1320.f, 520.f, 4.f), Concrete, false, false);
@@ -438,6 +460,12 @@ void ANightSchoolDirector::BuildStructure()
 	AddBox(W(-700.f, -600.f, 46.f), FVector(140.f, 36.f, 3.f), DarkWood, false, false);
 	AddBox(W(-700.f, 800.f, 46.f), FVector(140.f, 36.f, 3.f), DarkWood, false, false);
 	AddBox(W(1200.f, 400.f, 46.f), FVector(36.f, 140.f, 3.f), DarkWood, false, false);
+	AddBox(W(-1650.f, -1000.f, 43.f), FVector(1000.f, 720.f, 4.f), Concrete, false, false);
+	AddBox(W(2160.f, 400.f, 43.f), FVector(240.f, 720.f, 4.f), DarkWood, false, false);
+	AddBox(W(1550.f, 2300.f, 43.f), FVector(1200.f, 720.f, 4.f), Concrete, false, false);
+	AddBox(W(-1100.f, -1000.f, 46.f), FVector(36.f, 140.f, 3.f), DarkWood, false, false);
+	AddBox(W(2000.f, 400.f, 46.f), FVector(36.f, 140.f, 3.f), DarkWood, false, false);
+	AddBox(W(1600.f, 1900.f, 46.f), FVector(140.f, 36.f, 3.f), DarkWood, false, false);
 }
 
 void ANightSchoolDirector::BuildDressing()
@@ -595,6 +623,9 @@ void ANightSchoolDirector::BuildLights()
 	AddLantern(1250.f, 1100.f, 230.f, 14.f, true);
 	AddLantern(1900.f, 1100.f, 220.f, 8.f, false);
 	AddLantern(1550.f, 1650.f, 230.f, 9.f, false);
+	AddLantern(-1650.f, -1000.f, 230.f, 14.f, true);
+	AddLantern(2160.f, 400.f, 220.f, 8.f, false);
+	AddLantern(1550.f, 2300.f, 230.f, 8.f, false);
 
 	SpawnProp(ENightPropId::Phone, W(-980.f, 220.f, 122.f), FVector(22.f, 16.f, 6.f), FLinearColor(0.04f, 0.045f, 0.05f), FText::FromString(TEXT("看未接来电")), FVector::ZeroVector, 0.f, TEXT("手机"));
 	SpawnProp(ENightPropId::Earplugs, W(-860.f, 600.f, 96.f), FVector(12.f, 10.f, 5.f), FLinearColor(0.75f, 0.72f, 0.64f), FText::FromString(TEXT("拿走耳塞")), FVector::ZeroVector, 0.f, TEXT("耳塞"));
@@ -648,8 +679,40 @@ void ANightSchoolDirector::BuildLights()
 	SpawnProp(ENightPropId::LureShop, W(1750.f, 620.f, 88.f), FVector(28.f, 28.f, 12.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, 180.f, TEXT("地砖"));
 	SpawnProp(ENightPropId::LureNotice, W(1600.f, 1580.f, 88.f), FVector(28.f, 28.f, 12.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, -90.f, TEXT("地砖"));
 	SpawnProp(ENightPropId::SpareCell, W(180.f, 1280.f, 100.f), FVector(10.f, 8.f, 14.f), FLinearColor(0.2f, 0.32f, 0.18f), FText::FromString(TEXT("拿走备用电池")), FVector::ZeroVector, -90.f, TEXT("电池"));
+	SpawnProp(ENightPropId::CallDoor, W(-1100.f, -1000.f, 145.f), FVector(8.f, 68.f, 100.f), DarkWood, FText::FromString(TEXT("进入通话间")), FVector(0.f, -200.f, 0.f), 0.f, TEXT("通话间"));
+	SpawnProp(ENightPropId::CallA, W(-1900.f, -1200.f, 110.f), FVector(20.f, 14.f, 4.f), Paper, FText::FromString(TEXT("读清晨那通")), FVector::ZeroVector, 90.f, TEXT("清晨"));
+	SpawnProp(ENightPropId::CallB, W(-1500.f, -900.f, 110.f), FVector(20.f, 14.f, 4.f), Paper, FText::FromString(TEXT("读锁屏那通")), FVector::ZeroVector, 0.f, TEXT("锁屏"));
+	SpawnProp(ENightPropId::CallC, W(-1800.f, -750.f, 110.f), FVector(20.f, 14.f, 4.f), Paper, FText::FromString(TEXT("读镜头那通")), FVector::ZeroVector, -90.f, TEXT("镜头"));
+	SpawnProp(ENightPropId::StampCall, W(-1600.f, -1100.f, 100.f), FVector(22.f, 16.f, 8.f), Wood, FText::FromString(TEXT("盖上第三章的章")), FVector::ZeroVector, 90.f, TEXT("章"));
+	SpawnProp(ENightPropId::StampDuty, W(-980.f, -1000.f, 110.f), FVector(22.f, 16.f, 8.f), Wood, FText::FromString(TEXT("盖上第二章的章")), FVector::ZeroVector, 0.f, TEXT("章"));
+	SpawnProp(ENightPropId::StampAnte, W(-240.f, -250.f, 110.f), FVector(28.f, 10.f, 24.f), Wood, FText::FromString(TEXT("把第一章的章印按上")), FVector::ZeroVector, 90.f, TEXT("木板"));
+	SpawnProp(ENightPropId::StampDorm, W(-480.f, 560.f, 100.f), FVector(18.f, 14.f, 8.f), Wood, FText::FromString(TEXT("放下第五章的章印")), FVector::ZeroVector, -90.f, TEXT("章"));
+	SpawnProp(ENightPropId::ClassLogA, W(500.f, 300.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读座位那页")), FVector::ZeroVector, 180.f, TEXT("座位"));
+	SpawnProp(ENightPropId::ClassLogB, W(800.f, 500.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读奶茶那页")), FVector::ZeroVector, -90.f, TEXT("奶茶"));
+	SpawnProp(ENightPropId::ClassLogC, W(1050.f, 350.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读实验那页")), FVector::ZeroVector, 180.f, TEXT("实验"));
+	SpawnProp(ENightPropId::StampClass, W(800.f, 680.f, 90.f), FVector(20.f, 14.f, 8.f), Wood, FText::FromString(TEXT("盖上第四章的章")), FVector::ZeroVector, -90.f, TEXT("章"));
+	SpawnProp(ENightPropId::StoreDoor, W(2000.f, 400.f, 145.f), FVector(8.f, 68.f, 100.f), DarkWood, FText::FromString(TEXT("进入后仓")), FVector(0.f, 200.f, 0.f), 180.f, TEXT("后仓"));
+	SpawnProp(ENightPropId::ReceiptA, W(2200.f, 220.f, 100.f), FVector(16.f, 12.f, 3.f), Paper, FText::FromString(TEXT("读已付的收据")), FVector::ZeroVector, 180.f, TEXT("已付"));
+	SpawnProp(ENightPropId::ReceiptB, W(2100.f, 520.f, 100.f), FVector(16.f, 12.f, 3.f), Paper, FText::FromString(TEXT("读缺席的收据")), FVector::ZeroVector, 180.f, TEXT("缺席"));
+	SpawnProp(ENightPropId::ReceiptC, W(2240.f, 650.f, 100.f), FVector(16.f, 12.f, 3.f), Paper, FText::FromString(TEXT("读收据背面")), FVector::ZeroVector, -90.f, TEXT("背面"));
+	SpawnProp(ENightPropId::DraftA, W(450.f, 1000.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读第一页批注")), FVector::ZeroVector, -90.f, TEXT("批注"));
+	SpawnProp(ENightPropId::DraftB, W(500.f, 1280.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读第二页批注")), FVector::ZeroVector, 180.f, TEXT("点名"));
+	SpawnProp(ENightPropId::DraftC, W(780.f, 1280.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读第三页批注")), FVector::ZeroVector, -90.f, TEXT("后悔"));
+	SpawnProp(ENightPropId::AnnexDoor, W(1600.f, 1900.f, 145.f), FVector(68.f, 8.f, 100.f), DarkWood, FText::FromString(TEXT("进入长榜")), FVector(200.f, 0.f, 0.f), -90.f, TEXT("长榜"));
+	SpawnProp(ENightPropId::NoticeE, W(1100.f, 2520.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第五张")), FVector::ZeroVector, -90.f, TEXT("五"));
+	SpawnProp(ENightPropId::NoticeF, W(1400.f, 2520.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第六张")), FVector::ZeroVector, -90.f, TEXT("六"));
+	SpawnProp(ENightPropId::NoticeG, W(1700.f, 2520.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第七张")), FVector::ZeroVector, -90.f, TEXT("七"));
+	SpawnProp(ENightPropId::NoticeH, W(2000.f, 2520.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第八张")), FVector::ZeroVector, -90.f, TEXT("八"));
+	SpawnProp(ENightPropId::LureAnnex, W(1600.f, 2250.f, 88.f), FVector(28.f, 28.f, 12.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, -90.f, TEXT("地砖"));
+	SpawnProp(ENightPropId::ChartA, W(-200.f, 1280.f, 100.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读物品那页")), FVector::ZeroVector, 0.f, TEXT("物品"));
+	SpawnProp(ENightPropId::ChartB, W(200.f, 1500.f, 100.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读血压那页")), FVector::ZeroVector, 180.f, TEXT("血压"));
+	SpawnProp(ENightPropId::ChartC, W(-180.f, 1520.f, 100.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读门那页")), FVector::ZeroVector, 0.f, TEXT("门"));
+	SpawnProp(ENightPropId::SelfFigure, W(620.f, 1720.f, 120.f), FVector(22.f, 16.f, 40.f), FLinearColor(0.12f, 0.18f, 0.32f), FText::FromString(TEXT("看清他")), FVector::ZeroVector, -90.f, TEXT("自己"));
 	AddLabel(W(-700.f, -540.f, 210.f), 90.f, TEXT("值班室"), 16.f, FColor(220, 200, 160));
 	AddLabel(W(-700.f, 760.f, 220.f), -90.f, TEXT("储物柜"), 16.f, FColor(220, 200, 160));
+	AddLabel(W(-1500.f, -560.f, 210.f), 90.f, TEXT("通话间"), 16.f, FColor(220, 200, 160));
+	AddLabel(W(2100.f, 140.f, 210.f), -90.f, TEXT("后仓"), 16.f, FColor(220, 200, 160));
+	AddLabel(W(1200.f, 1960.f, 210.f), 90.f, TEXT("长榜"), 16.f, FColor(220, 200, 160));
 
 	AddSprite(W(600.f, 1868.f, 180.f), -90.f, NightSchoolArt::MakeMirror(this), 56.f, 74.f);
 	AddSprite(W(1000.f, 560.f, 150.f), -90.f, NightSchoolArt::MakeScoreSheet(this), 36.f, 46.f);
@@ -847,6 +910,295 @@ void ANightSchoolDirector::SpawnComputerGhost()
 	SpawnGhost(Room, Points, TEXT("分"));
 }
 
+void ANightSchoolDirector::SpawnAnnexGhost()
+{
+	if (bAnnexGhost)
+	{
+		return;
+	}
+	bAnnexGhost = true;
+	const FBox Room(W(980.f, 1980.f, -20.f), W(2120.f, 2620.f, 420.f));
+	TArray<FVector> Points;
+	Points.Add(W(1200.f, 2200.f, 128.f));
+	Points.Add(W(1700.f, 2300.f, 128.f));
+	Points.Add(W(2000.f, 2150.f, 128.f));
+	Points.Add(W(1400.f, 2400.f, 128.f));
+	SpawnGhost(Room, Points, TEXT("名"));
+}
+
+int32 ANightSchoolDirector::CallCount() const
+{
+	return (bCallA ? 1 : 0) + (bCallB ? 1 : 0) + (bCallC ? 1 : 0);
+}
+
+int32 ANightSchoolDirector::ClassCount() const
+{
+	return (bClassA ? 1 : 0) + (bClassB ? 1 : 0) + (bClassC ? 1 : 0);
+}
+
+int32 ANightSchoolDirector::ReceiptCount() const
+{
+	return (bReceiptA ? 1 : 0) + (bReceiptB ? 1 : 0) + (bReceiptC ? 1 : 0);
+}
+
+int32 ANightSchoolDirector::DraftCount() const
+{
+	return (bDraftA ? 1 : 0) + (bDraftB ? 1 : 0) + (bDraftC ? 1 : 0);
+}
+
+int32 ANightSchoolDirector::ChartCount() const
+{
+	return (bChartA ? 1 : 0) + (bChartB ? 1 : 0) + (bChartC ? 1 : 0);
+}
+
+void ANightSchoolDirector::GrantSeals()
+{
+	if (bCameraCovered && !bSeal1Set)
+	{
+		bSeal1Held = true;
+	}
+	if (bSatAlone && !bSeal2Set)
+	{
+		bSeal2Held = true;
+	}
+	if (bLedgerPosted && !bSeal3Set)
+	{
+		bSeal3Held = true;
+	}
+	if (bTeacherRead && DraftCount() >= 3 && MinutesCount() >= 3 && !bSeal4Set)
+	{
+		bSeal4Held = true;
+	}
+	if (NoticeCount() >= 8 && !bSeal5Set)
+	{
+		bSeal5Held = true;
+	}
+}
+
+void ANightSchoolDirector::TryOpenGrade()
+{
+	if (bGradeOpen || !bTeacherRead || DraftCount() < 3)
+	{
+		return;
+	}
+	bGradeOpen = true;
+	if (ANightSchoolProp* Door = FindProp(ENightPropId::GradeDoor))
+	{
+		Door->OpenDoor();
+	}
+	SpawnNoticeGhost();
+	ShowStatus(TEXT("年级组的门开了。北廊在它里面再往北。长榜还要再盖一枚章。"), 8.f);
+}
+
+void ANightSchoolDirector::BuildRooms()
+{
+	RoomViews.Reset();
+	auto AddRoom = [this](const TCHAR* Id, float MinX, float MinY, float MaxX, float MaxY, const TCHAR* Name)
+	{
+		FNightRoomView Room;
+		Room.Id = FName(Id);
+		Room.Name = Name;
+		Room.Bounds = FBox(W(MinX, MinY, -50.f), W(MaxX, MaxY, 400.f));
+		RoomViews.Add(Room);
+	};
+	AddRoom(TEXT("Ante"), -1050.f, -550.f, 250.f, -50.f, TEXT("前厅"));
+	AddRoom(TEXT("Dorm"), -1050.f, 50.f, -350.f, 750.f, TEXT("宿舍"));
+	AddRoom(TEXT("Duty"), -1050.f, -1350.f, -400.f, -650.f, TEXT("值班室"));
+	AddRoom(TEXT("Laundry"), -280.f, -1350.f, 250.f, -650.f, TEXT("洗衣间"));
+	AddRoom(TEXT("Call"), -2150.f, -1350.f, -1150.f, -650.f, TEXT("通话间"));
+	AddRoom(TEXT("Locker"), -1050.f, 850.f, -350.f, 1350.f, TEXT("储物柜"));
+	AddRoom(TEXT("Hall"), -250.f, 50.f, 250.f, 950.f, TEXT("走廊"));
+	AddRoom(TEXT("Class"), 350.f, 50.f, 1150.f, 750.f, TEXT("教室"));
+	AddRoom(TEXT("Shop"), 1250.f, 50.f, 1950.f, 750.f, TEXT("小卖部"));
+	AddRoom(TEXT("Store"), 2060.f, 50.f, 2280.f, 750.f, TEXT("后仓"));
+	AddRoom(TEXT("Office"), 350.f, 850.f, 850.f, 1350.f, TEXT("办公室"));
+	AddRoom(TEXT("Grade"), 950.f, 850.f, 1550.f, 1350.f, TEXT("年级组"));
+	AddRoom(TEXT("Computer"), 1680.f, 850.f, 2150.f, 1350.f, TEXT("微机室"));
+	AddRoom(TEXT("Notice"), 980.f, 1480.f, 2150.f, 1850.f, TEXT("北廊"));
+	AddRoom(TEXT("Annex"), 980.f, 1980.f, 2150.f, 2620.f, TEXT("长榜"));
+	AddRoom(TEXT("Infirmary"), -250.f, 1050.f, 250.f, 1550.f, TEXT("校医室"));
+	AddRoom(TEXT("Light"), 350.f, 1480.f, 850.f, 1850.f, TEXT("光"));
+	AddRoom(TEXT("Closet"), -750.f, 1480.f, -350.f, 1850.f, TEXT("柜子"));
+}
+
+void ANightSchoolDirector::BuildSelfFigure()
+{
+	const FVector Feet = W(620.f, 1788.f, 40.f);
+	const FLinearColor Skin(0.62f, 0.45f, 0.36f);
+	const FLinearColor Hair(0.06f, 0.05f, 0.045f);
+	const FLinearColor Jacket(0.12f, 0.18f, 0.32f);
+	const FLinearColor Shirt(0.82f, 0.82f, 0.78f);
+	const FLinearColor Trousers(0.10f, 0.11f, 0.13f);
+	const FLinearColor Shoes(0.05f, 0.05f, 0.05f);
+	const FLinearColor Glass(0.02f, 0.02f, 0.02f);
+	const FLinearColor Pack(0.16f, 0.17f, 0.18f);
+	const FLinearColor Book(0.55f, 0.16f, 0.12f);
+	AddBox(Feet + FVector(0.f, 2.f, 3.f), FVector(22.f, 30.f, 6.f), Shoes, false, false);
+	AddBox(Feet + FVector(0.f, 0.f, 46.f), FVector(24.f, 18.f, 80.f), Trousers, false, false);
+	AddBox(Feet + FVector(0.f, 0.f, 108.f), FVector(38.f, 20.f, 52.f), Jacket, false, false);
+	AddBox(Feet + FVector(0.f, 0.f, 137.f), FVector(10.f, 10.f, 10.f), Skin, false, false);
+	AddBox(Feet + FVector(0.f, -9.f, 128.f), FVector(16.f, 4.f, 10.f), Shirt, false, false);
+	AddBox(Feet + FVector(-26.f, 0.f, 108.f), FVector(10.f, 10.f, 46.f), Jacket, false, false);
+	AddBox(Feet + FVector(26.f, 0.f, 108.f), FVector(10.f, 10.f, 46.f), Jacket, false, false);
+	AddBox(Feet + FVector(-26.f, -2.f, 82.f), FVector(8.f, 8.f, 8.f), Skin, false, false);
+	AddBox(Feet + FVector(26.f, -6.f, 84.f), FVector(8.f, 10.f, 8.f), Skin, false, false);
+	AddSphere(Feet + FVector(0.f, 0.f, 152.f), 12.f, Skin, false);
+	AddSphere(Feet + FVector(0.f, 2.f, 158.f), 12.5f, Hair, false);
+	AddSphere(Feet + FVector(-4.5f, -10.f, 154.f), 1.4f, FLinearColor(0.08f, 0.07f, 0.06f), false);
+	AddSphere(Feet + FVector(4.5f, -10.f, 154.f), 1.4f, FLinearColor(0.08f, 0.07f, 0.06f), false);
+	AddBox(Feet + FVector(0.f, -12.f, 154.f), FVector(13.f, 1.2f, 3.5f), Glass, false, false);
+	AddBox(Feet + FVector(0.f, 16.f, 112.f), FVector(28.f, 12.f, 36.f), Pack, false, false);
+	AddBox(Feet + FVector(26.f, -12.f, 86.f), FVector(10.f, 14.f, 2.f), Book, false, false);
+}
+
+void ANightSchoolDirector::TickPreview(float DeltaSeconds)
+{
+	if (!bPreviewing)
+	{
+		return;
+	}
+	ANightSchoolCharacter* Current = Player();
+	if (Current)
+	{
+		Current->SetPreviewing(true);
+	}
+	if (!bPreviewReturning)
+	{
+		PreviewTime += DeltaSeconds;
+		if (PreviewPoints.Num() >= 2 && PreviewCamera)
+		{
+			const float Span = PreviewDuration / static_cast<float>(PreviewPoints.Num() - 1);
+			const int32 Last = PreviewPoints.Num() - 2;
+			const int32 Segment = FMath::Clamp(FMath::FloorToInt(PreviewTime / Span), 0, Last);
+			const float Alpha = FMath::Clamp((PreviewTime - Segment * Span) / Span, 0.f, 1.f);
+			const FVector Loc = FMath::Lerp(PreviewPoints[Segment], PreviewPoints[Segment + 1], Alpha);
+			PreviewCamera->SetActorLocation(Loc);
+			PreviewCamera->SetActorRotation((PreviewLook - Loc).Rotation());
+		}
+		if (PreviewTime >= PreviewDuration)
+		{
+			bPreviewReturning = true;
+			PreviewReturnLeft = 0.55f;
+			if (APlayerController* Controller = UGameplayStatics::GetPlayerController(this, 0))
+			{
+				Controller->SetViewTargetWithBlend(Current, 0.45f, VTBlend_Cubic, 0.f, false);
+			}
+		}
+		return;
+	}
+	PreviewReturnLeft -= DeltaSeconds;
+	if (PreviewReturnLeft <= 0.f)
+	{
+		bPreviewing = false;
+		bPreviewReturning = false;
+		PreviewHold = 0.35f;
+		if (Current)
+		{
+			Current->SetPreviewing(false);
+		}
+	}
+}
+
+void ANightSchoolDirector::TryBeginPreview()
+{
+	if (bPreviewing || bNoteOpen || IsEnding() || PreviewHold > 0.f)
+	{
+		return;
+	}
+	ANightSchoolCharacter* Current = Player();
+	if (!Current)
+	{
+		return;
+	}
+	const FVector Loc = Current->GetActorLocation();
+	int32 Best = INDEX_NONE;
+	float BestArea = TNumericLimits<float>::Max();
+	for (int32 Index = 0; Index < RoomViews.Num(); ++Index)
+	{
+		FNightRoomView& Room = RoomViews[Index];
+		if (Room.bSeen || !Room.Bounds.IsInsideXY(Loc))
+		{
+			continue;
+		}
+		const FVector Extent = Room.Bounds.GetExtent();
+		const float Area = Extent.X * Extent.Y;
+		if (Area < BestArea)
+		{
+			BestArea = Area;
+			Best = Index;
+		}
+	}
+	if (Best != INDEX_NONE)
+	{
+		BeginRoomPreview(RoomViews[Best]);
+	}
+}
+
+void ANightSchoolDirector::BeginRoomPreview(FNightRoomView& Room)
+{
+	Room.bSeen = true;
+	UWorld* World = GetWorld();
+	ANightSchoolCharacter* Current = Player();
+	APlayerController* Controller = UGameplayStatics::GetPlayerController(this, 0);
+	if (!World || !Current || !Controller)
+	{
+		return;
+	}
+	if (!PreviewCamera)
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		PreviewCamera = World->SpawnActor<ACameraActor>(ACameraActor::StaticClass(), FTransform(Current->GetActorLocation()), Params);
+		if (PreviewCamera)
+		{
+			PreviewCamera->Tags.Add(TEXT("NightSchool"));
+			if (UCameraComponent* Lens = PreviewCamera->GetCameraComponent())
+			{
+				Lens->SetFieldOfView(88.f);
+			}
+		}
+	}
+	if (!PreviewCamera)
+	{
+		return;
+	}
+	const float EyeZ = NightSchool::Origin().Z + 190.f;
+	const float Width = Room.Bounds.Max.X - Room.Bounds.Min.X;
+	const float Depth = Room.Bounds.Max.Y - Room.Bounds.Min.Y;
+	const float InsetX = FMath::Clamp(Width * 0.18f, 36.f, 90.f);
+	const float InsetY = FMath::Clamp(Depth * 0.18f, 36.f, 90.f);
+	const float X0 = Room.Bounds.Min.X + InsetX;
+	const float X1 = Room.Bounds.Max.X - InsetX;
+	const float Y0 = Room.Bounds.Min.Y + InsetY;
+	const float Y1 = Room.Bounds.Max.Y - InsetY;
+	PreviewPoints.Reset();
+	PreviewPoints.Add(FVector(X0, Y0, EyeZ));
+	PreviewPoints.Add(FVector(X1, Y0, EyeZ));
+	PreviewPoints.Add(FVector(X1, Y1, EyeZ));
+	PreviewPoints.Add(FVector(X0, Y1, EyeZ));
+	PreviewPoints.Add(FVector(X0, Y0, EyeZ));
+	const FVector Center = Room.Bounds.GetCenter();
+	PreviewLook = FVector(Center.X, Center.Y, EyeZ - 50.f);
+	PreviewTime = 0.f;
+	PreviewDuration = 10.f;
+	bPreviewReturning = false;
+	bPreviewing = true;
+	PreviewCaption = FString::Printf(TEXT("第一次走进%s。镜头把这间屋走一遍。按 Q 跳过。"), *Room.Name);
+	PreviewCamera->SetActorLocation(PreviewPoints[0]);
+	PreviewCamera->SetActorRotation((PreviewLook - PreviewPoints[0]).Rotation());
+	Controller->SetViewTargetWithBlend(PreviewCamera, 0.35f, VTBlend_Cubic, 0.f, false);
+	Current->SetPreviewing(true);
+}
+
+void ANightSchoolDirector::SkipPreview()
+{
+	if (!bPreviewing || bPreviewReturning)
+	{
+		return;
+	}
+	PreviewTime = PreviewDuration;
+}
+
 bool ANightSchoolDirector::AnyGhostContains(const FVector& Point) const
 {
 	for (const TObjectPtr<ANightSchoolApparition>& Ghost : Apparitions)
@@ -876,7 +1228,8 @@ int32 ANightSchoolDirector::MinutesCount() const
 
 int32 ANightSchoolDirector::NoticeCount() const
 {
-	return (bNoticeA ? 1 : 0) + (bNoticeB ? 1 : 0) + (bNoticeC ? 1 : 0) + (bNoticeD ? 1 : 0);
+	return (bNoticeA ? 1 : 0) + (bNoticeB ? 1 : 0) + (bNoticeC ? 1 : 0) + (bNoticeD ? 1 : 0)
+		+ (bNoticeE ? 1 : 0) + (bNoticeF ? 1 : 0) + (bNoticeG ? 1 : 0) + (bNoticeH ? 1 : 0);
 }
 
 int32 ANightSchoolDirector::EssayCount() const
@@ -917,13 +1270,25 @@ void ANightSchoolDirector::Tick(float DeltaSeconds)
 		StatusLine.Reset();
 	}
 	FearLock = FMath::Max(0.f, FearLock - DeltaSeconds);
-	if (!IsEnding() && !bNoteOpen)
+	GrantSeals();
+	const int32 ChapterNow = GetChapterIndex();
+	if (ChapterNow != ShownChapter)
+	{
+		ShownChapter = ChapterNow;
+		ChapterBanner = NightSchoolStory::ChapterBanner(ChapterNow);
+		ChapterBannerTime = 7.f;
+	}
+	ChapterBannerTime = FMath::Max(0.f, ChapterBannerTime - DeltaSeconds);
+	PreviewHold = FMath::Max(0.f, PreviewHold - DeltaSeconds);
+	TickPreview(DeltaSeconds);
+	TryBeginPreview();
+	if (!IsEnding() && !bNoteOpen && !bPreviewing)
 	{
 		LureTime = FMath::Max(0.f, LureTime - DeltaSeconds);
 	}
 	if (ANightSchoolCharacter* Current = Player())
 	{
-		if (!IsEnding() && !bNoteOpen)
+		if (!IsEnding() && !bNoteOpen && !bPreviewing)
 		{
 			if (!bCameraCovered && IsInDorm(Current->GetActorLocation()))
 			{
@@ -1030,6 +1395,10 @@ FString ANightSchoolDirector::GetObjective() const
 	{
 		return TEXT("西边是宿舍。先看那只每天都响的手机。");
 	}
+	if (CallCount() < 3)
+	{
+		return TEXT("值班室西边是通话间。三页通话记录要读完。");
+	}
 	if (DutyCount() < 3)
 	{
 		return TEXT("南边值班室有老吴的三页记录。读完，再开那只抽屉。");
@@ -1038,9 +1407,13 @@ FString ANightSchoolDirector::GetObjective() const
 	{
 		return TEXT("镜头布在值班室抽屉里。宿舍北墙那只眼睛还亮着。");
 	}
-	if (!bCameraCovered || !bHallOpen)
+	if (!bCameraCovered)
 	{
-		return TEXT("把布盖上宿舍的镜头，走廊才会开。");
+		return TEXT("把布盖上宿舍的镜头。章印会回到你身上。");
+	}
+	if (!bSeal1Set)
+	{
+		return TEXT("把第一章的章印按到前厅木板上。走廊这时才开。");
 	}
 	if (NoteCount() < 4)
 	{
@@ -1048,23 +1421,39 @@ FString ANightSchoolDirector::GetObjective() const
 		{
 			return TEXT("江晚的条子在空位旁、走廊和储物柜。第四张在小卖部，宿舍铁盒里的硬币能把卷帘送上去。");
 		}
-		return TEXT("江晚的条子还没齐：空位旁、走廊、小卖部柜台、储物柜。凑齐四张，再坐下。");
+		return TEXT("江晚的条子还没齐：空位旁、走廊、小卖部柜台、储物柜。");
+	}
+	if (ClassCount() < 3)
+	{
+		return TEXT("教室里还有三页班级日志。看完再坐那张空位。");
 	}
 	if (!bSatAlone)
 	{
-		return TEXT("四张条子都在了。回教室，在那张没有人肯同桌的空位上坐下。");
+		return TEXT("条子和日志都齐了。在那张没有人肯同桌的空位上坐下。");
+	}
+	if (!bSeal2Set)
+	{
+		return TEXT("把第二章的章印盖到值班室。然后才能钉账。");
+	}
+	if (!bShopOpen)
+	{
+		return TEXT("宿舍铁盒里的硬币能打开东边小卖部。那不是请客。");
+	}
+	if (ReceiptCount() < 3)
+	{
+		return TEXT("卷帘后面还有后仓。三张收据看完，账本才肯被拿走。");
 	}
 	if (!bLedgerPosted)
 	{
-		if (!bShopOpen)
-		{
-			return TEXT("宿舍铁盒里的硬币能打开东边小卖部。那不是请客，是去看见那本账。");
-		}
 		if (!bLedgerHeld)
 		{
-			return TEXT("请客的账本在小卖部柜台底下。");
+			return TEXT("柜台下的账本现在可以拿。");
 		}
 		return TEXT("把账本钉到走廊的布告栏上。");
+	}
+	if (!bSeal3Set)
+	{
+		return TEXT("把第三章的章印盖进西边通话间。办公室才收卷子。");
 	}
 	if (!bHasExam && !bExamGiven)
 	{
@@ -1072,7 +1461,11 @@ FString ANightSchoolDirector::GetObjective() const
 	}
 	if (!bExamGiven || !bOfficeOpen)
 	{
-		return TEXT("空位坐过，账本钉过，才能把试卷交到办公室门口。藏进抽屉不算。");
+		return TEXT("空位、账本、章印都齐了。把试卷交到办公室门口。藏进抽屉不算。");
+	}
+	if (DraftCount() < 3)
+	{
+		return TEXT("办公室里有三页改卷批注。看完，年级组才开。");
 	}
 	if (!bTeacherRead)
 	{
@@ -1080,23 +1473,35 @@ FString ANightSchoolDirector::GetObjective() const
 	}
 	if (MinutesCount() < 3)
 	{
-		return TEXT("年级组里有三页会议记录。字条已经让那扇门开了。");
+		return TEXT("年级组里有三页会议记录。");
 	}
-	if (NoticeCount() < 4)
+	if (!bSeal4Set)
 	{
-		return TEXT("年级组再往北，长廊上有四张告示。");
+		return TEXT("把第四章的章印盖回教室那张空位。长榜才会开。");
+	}
+	if (NoticeCount() < 8)
+	{
+		return TEXT("北廊四张，再往北的长榜还有四张。八张都要看。");
+	}
+	if (!bSeal5Set)
+	{
+		return TEXT("把第五章的章印送回宿舍那只已经盖住的镜头旁边。");
 	}
 	if (!bInfirmaryOpen)
 	{
-		return TEXT("三页记录和四张告示都看完了。回走廊，往北进校医室。");
+		return TEXT("回走廊，往北进校医室。");
+	}
+	if (ChartCount() < 3)
+	{
+		return TEXT("校医室有三页旧病历。先看完，再叫周先生。");
 	}
 	if (!bZhouIntro)
 	{
-		return TEXT("去校医室听周先生说话。两扇门他还不会一次说完。");
+		return TEXT("去听周先生说话。两扇门他还不会一次说完。");
 	}
 	if (!bItemsReturned)
 	{
-		return TEXT("铅笔盒在储物柜，月票在微机室，课表在南边洗衣间。三样放到校医室的托盘上。");
+		return TEXT("铅笔盒在储物柜，月票在微机室，课表在南边洗衣间。三样放到托盘上。");
 	}
 	if (!bZhouHeard)
 	{
@@ -1104,9 +1509,63 @@ FString ANightSchoolDirector::GetObjective() const
 	}
 	if (bWearingEarplugs)
 	{
-		return TEXT("光的开关要先回宿舍拿下耳塞。柜子在校医室西边，从里面带上门就会留下。作文不是门票。");
+		return TEXT("光的开关要先回宿舍拿下耳塞。");
 	}
-	return TEXT("办公室北面，用手拨开关才能离开。校医室西边的柜子，从里面带上门就会留下。三篇作文可以放在光里的长凳上，不放也能走。");
+	if (!bSawSelf)
+	{
+		return TEXT("光里站着一个人。先看清他。然后拨开关，或者去西边的柜子。");
+	}
+	return TEXT("用手拨开关离开，或从柜子里面把门带上。三篇作文可以放在长凳上，不放也能走。");
+}
+
+int32 ANightSchoolDirector::GetChapterIndex() const
+{
+	if (!bSeal1Set)
+	{
+		return 1;
+	}
+	if (!bSatAlone || !bSeal2Set)
+	{
+		return 2;
+	}
+	if (!bLedgerPosted || !bSeal3Set)
+	{
+		return 3;
+	}
+	if (!(bTeacherRead && DraftCount() >= 3 && MinutesCount() >= 3 && bSeal4Set))
+	{
+		return 4;
+	}
+	if (!(NoticeCount() >= 8 && bSeal5Set))
+	{
+		return 5;
+	}
+	return 6;
+}
+
+FString ANightSchoolDirector::GetChapterLine() const
+{
+	FString Line;
+	switch (GetChapterIndex())
+	{
+	case 1: Line = TEXT("第一章  未接"); break;
+	case 2: Line = TEXT("第二章  空位"); break;
+	case 3: Line = TEXT("第三章  请客"); break;
+	case 4: Line = TEXT("第四章  恨铁"); break;
+	case 5: Line = TEXT("第五章  榜"); break;
+	default: Line = TEXT("第六章  两扇门"); break;
+	}
+	if (ChapterBannerTime > 0.f && !ChapterBanner.IsEmpty())
+	{
+		Line += TEXT("\n");
+		Line += ChapterBanner;
+	}
+	return Line;
+}
+
+FString ANightSchoolDirector::GetPreviewLine() const
+{
+	return bPreviewing ? PreviewCaption : FString();
 }
 
 FString ANightSchoolDirector::GetFacingLine() const
@@ -1159,6 +1618,7 @@ FString ANightSchoolDirector::GetItemsLine() const
 	if (bHasBus) Append(TEXT("月票"));
 	if (bHasTime) Append(TEXT("课表"));
 	if (!bEssaysKept && EssayCount() > 0) Append(TEXT("作文"));
+	if (bSeal1Held || bSeal2Held || bSeal3Held || bSeal4Held || bSeal5Held) Append(TEXT("章印"));
 	return Line.IsEmpty() ? TEXT("空的") : Line;
 }
 
@@ -1166,11 +1626,16 @@ FString ANightSchoolDirector::GetThreadsLine() const
 {
 	const int32 Items = bItemsReturned ? 3 : ((bHasPencil ? 1 : 0) + (bHasBus ? 1 : 0) + (bHasTime ? 1 : 0));
 	FString Line = FString::Printf(
-		TEXT("值班 %d/3  条子 %d/4  会议 %d/3  告示 %d/4  旧物 %d/3  作文 %d/3"),
+		TEXT("通话 %d/3  值班 %d/3  条子 %d/4  日志 %d/3  收据 %d/3  批注 %d/3  会议 %d/3  告示 %d/8  病历 %d/3  旧物 %d/3  作文 %d/3"),
+		CallCount(),
 		DutyCount(),
 		NoteCount(),
+		ClassCount(),
+		ReceiptCount(),
+		DraftCount(),
 		MinutesCount(),
 		NoticeCount(),
+		ChartCount(),
 		Items,
 		EssayCount());
 	if (bCoin && !bCoinSpent)
@@ -1213,7 +1678,23 @@ FString ANightSchoolDirector::GetThreadsLine() const
 	{
 		Line += TEXT("  ·第二瓶");
 	}
-	const int32 Awake = (bShopGhost ? 1 : 0) + (bNoticeGhost ? 1 : 0) + (bComputerGhost ? 1 : 0);
+	if (bStoreOpen)
+	{
+		Line += TEXT("  ·后仓");
+	}
+	if (bAnnexOpen)
+	{
+		Line += TEXT("  ·长榜");
+	}
+	if (bSawSelf)
+	{
+		Line += TEXT("  ·看见了");
+	}
+	if (bSeal1Set && bSeal2Set && bSeal3Set && bSeal4Set && bSeal5Set)
+	{
+		Line += TEXT("  ·五章已盖");
+	}
+	const int32 Awake = (bShopGhost ? 1 : 0) + (bNoticeGhost ? 1 : 0) + (bComputerGhost ? 1 : 0) + (bAnnexGhost ? 1 : 0);
 	if (Awake > 0 && Line.IsEmpty())
 	{
 		Line = TEXT("还有人在屋里走");
@@ -1267,7 +1748,7 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		ShowStatus(bWearingEarplugs ? TEXT("耳塞回到耳朵里。世界远了一点。") : TEXT("你把耳塞拿下来。声音重新贴着头皮。"), 3.4f);
 		break;
 	case ENightPropId::LensCloth:
-		if (!bPhoneRead || DutyCount() < 3)
+		if (!bPhoneRead || DutyCount() < 3 || CallCount() < 3)
 		{
 			ShowNote(TEXT("抽屉"), NightSchoolStory::ClothEarly());
 			break;
@@ -1284,19 +1765,16 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		}
 		bHasCloth = false;
 		bCameraCovered = true;
-		bHallOpen = true;
-		if (ANightSchoolProp* Door = FindProp(ENightPropId::HallDoor))
-		{
-			Door->OpenDoor();
-		}
+		bSeal1Held = true;
 		SpawnHallGhosts();
 		Prop->Consume();
 		ShowNote(TEXT("红点"), NightSchoolStory::CameraBody());
+		ShowStatus(TEXT("章印在你身上。按到前厅的木板上，走廊才开。"), 6.f);
 		break;
 	case ENightPropId::HallDoor:
-		if (!bCameraCovered)
+		if (!bSeal1Set)
 		{
-			ShowNote(TEXT("走廊"), NightSchoolStory::LockedHall());
+			ShowNote(TEXT("走廊"), TEXT("走廊从里面顶着。镜头盖上以后，章印要先按在前厅的木板上。"));
 			break;
 		}
 		bHallOpen = true;
@@ -1305,12 +1783,13 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 	case ENightPropId::Soda:
 		bHasSoda = true;
 		Prop->Consume();
-		ShowNote(TEXT("汽水"), TEXT("一瓶没开封的汽水，瓶壁是凉的。放在走廊、教室、小卖部或北廊的地砖上，气泡会响大约十八秒。谁听见谁就走过去。它打不碎谁，也伤不了你。"));
+		ShowNote(TEXT("汽水"), TEXT("一瓶没开封的汽水，瓶壁是凉的。放在走廊、教室、小卖部、北廊或长榜的地砖上，气泡会响大约十八秒。谁听见谁就走过去。它打不碎谁，也伤不了你。"));
 		break;
 	case ENightPropId::LureHall:
 	case ENightPropId::LureClass:
 	case ENightPropId::LureShop:
 	case ENightPropId::LureNotice:
+	case ENightPropId::LureAnnex:
 		if (!bHasSoda)
 		{
 			if (bShopOpen && !bShopSodaTaken)
@@ -1342,7 +1821,7 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		}
 		break;
 	case ENightPropId::UnwantedDesk:
-		if (NoteCount() < 4)
+		if (NoteCount() < 4 || ClassCount() < 3)
 		{
 			ShowNote(TEXT("空位"), NightSchoolStory::DeskEarly());
 			break;
@@ -1369,7 +1848,7 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		ShowNote(NightSchoolStory::HideScoreTitle(), NightSchoolStory::HideScoreBody());
 		break;
 	case ENightPropId::OfficeDoor:
-		if (!bSatAlone || !bLedgerPosted || (!bHasExam && !bExamGiven))
+		if (!bSatAlone || !bLedgerPosted || !bSeal3Set || (!bHasExam && !bExamGiven))
 		{
 			ShowNote(TEXT("办公室"), NightSchoolStory::LockedOffice());
 			break;
@@ -1384,21 +1863,17 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		Prop->OpenDoor();
 		break;
 	case ENightPropId::TeacherNote:
+		if (DraftCount() < 3)
+		{
+			ShowNote(TEXT("字条"), NightSchoolStory::NeedDrafts());
+			break;
+		}
 		bTeacherRead = true;
 		ShowNote(NightSchoolStory::TeacherTitle(), NightSchoolStory::TeacherBody());
-		if (!bGradeOpen)
-		{
-			bGradeOpen = true;
-			if (ANightSchoolProp* Door = FindProp(ENightPropId::GradeDoor))
-			{
-				Door->OpenDoor();
-			}
-			SpawnNoticeGhost();
-			ShowStatus(TEXT("年级组的门开了。北廊在它里面再往北。"), 14.f);
-		}
+		TryOpenGrade();
 		break;
 	case ENightPropId::InfirmaryDoor:
-		if (!bTeacherRead || MinutesCount() < 3 || NoticeCount() < 4)
+		if (!bTeacherRead || MinutesCount() < 3 || NoticeCount() < 8 || !bSeal5Set)
 		{
 			ShowNote(TEXT("校医室"), NightSchoolStory::LockedInfirmary());
 			break;
@@ -1407,6 +1882,11 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		Prop->OpenDoor();
 		break;
 	case ENightPropId::Zhou:
+		if (ChartCount() < 3)
+		{
+			ShowNote(TEXT("周先生"), NightSchoolStory::ChartBodyC());
+			break;
+		}
 		if (!bItemsReturned)
 		{
 			if (!bZhouIntro)
@@ -1458,6 +1938,11 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		if (!bExamGiven)
 		{
 			ShowNote(TEXT("开关"), NightSchoolStory::NeedExam());
+			break;
+		}
+		if (!bSawSelf)
+		{
+			ShowNote(TEXT("开关"), NightSchoolStory::NeedSelf());
 			break;
 		}
 		TriggerEnding(ENightEnding::InnerLight);
@@ -1527,11 +2012,21 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		ShowStatus(TEXT("卷帘上去了。这不是请客。账在柜台底下。"), 4.5f);
 		break;
 	case ENightPropId::Ledger:
+		if (ReceiptCount() < 3)
+		{
+			ShowNote(TEXT("账本"), NightSchoolStory::NeedReceipts());
+			break;
+		}
 		bLedgerHeld = true;
 		Prop->Consume();
 		ShowNote(NightSchoolStory::LedgerTitle(), NightSchoolStory::LedgerBody());
 		break;
 	case ENightPropId::LedgerBoard:
+		if (!bSeal2Set)
+		{
+			ShowStatus(TEXT("先把第二章的章印盖到值班室，再来钉这本账。"), 3.6f);
+			break;
+		}
 		if (!bLedgerHeld && !bLedgerPosted)
 		{
 			ShowStatus(TEXT("布告栏是空的。账本还在小卖部柜台底下。"), 3.6f);
@@ -1666,7 +2161,7 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		bShopSodaTaken = true;
 		bHasSoda = true;
 		Prop->Consume();
-		ShowNote(TEXT("汽水"), TEXT("柜台边还有一瓶，瓶壁一样凉。地砖在走廊、教室、小卖部和北廊。十八秒，谁听见谁走过去。打不了人。"));
+		ShowNote(TEXT("汽水"), TEXT("柜台边还有一瓶，瓶壁一样凉。地砖在走廊、教室、小卖部、北廊和长榜。十八秒，谁听见谁走过去。打不了人。"));
 		break;
 	case ENightPropId::SpareCell:
 		bSpareTaken = true;
@@ -1676,6 +2171,166 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		}
 		Prop->Consume();
 		ShowStatus(TEXT("备用电池装上了。那点光又能亮一阵。它不是离开这间屋的光。"), 4.2f);
+		break;
+	case ENightPropId::CallA:
+		bCallA = true;
+		ShowNote(NightSchoolStory::CallTitleA(), NightSchoolStory::CallBodyA());
+		break;
+	case ENightPropId::CallB:
+		bCallB = true;
+		ShowNote(NightSchoolStory::CallTitleB(), NightSchoolStory::CallBodyB());
+		break;
+	case ENightPropId::CallC:
+		bCallC = true;
+		ShowNote(NightSchoolStory::CallTitleC(), NightSchoolStory::CallBodyC());
+		break;
+	case ENightPropId::CallDoor:
+		Prop->OpenDoor();
+		break;
+	case ENightPropId::ClassLogA:
+		bClassA = true;
+		ShowNote(NightSchoolStory::ClassLogTitleA(), NightSchoolStory::ClassLogBodyA());
+		break;
+	case ENightPropId::ClassLogB:
+		bClassB = true;
+		ShowNote(NightSchoolStory::ClassLogTitleB(), NightSchoolStory::ClassLogBodyB());
+		break;
+	case ENightPropId::ClassLogC:
+		bClassC = true;
+		ShowNote(NightSchoolStory::ClassLogTitleC(), NightSchoolStory::ClassLogBodyC());
+		break;
+	case ENightPropId::ReceiptA:
+		bReceiptA = true;
+		ShowNote(NightSchoolStory::ReceiptTitleA(), NightSchoolStory::ReceiptBodyA());
+		break;
+	case ENightPropId::ReceiptB:
+		bReceiptB = true;
+		ShowNote(NightSchoolStory::ReceiptTitleB(), NightSchoolStory::ReceiptBodyB());
+		break;
+	case ENightPropId::ReceiptC:
+		bReceiptC = true;
+		ShowNote(NightSchoolStory::ReceiptTitleC(), NightSchoolStory::ReceiptBodyC());
+		break;
+	case ENightPropId::StoreDoor:
+		if (!bShopOpen)
+		{
+			ShowNote(TEXT("后仓"), NightSchoolStory::StoreLocked());
+			break;
+		}
+		bStoreOpen = true;
+		Prop->OpenDoor();
+		break;
+	case ENightPropId::DraftA:
+		bDraftA = true;
+		ShowNote(NightSchoolStory::DraftTitleA(), NightSchoolStory::DraftBodyA());
+		TryOpenGrade();
+		break;
+	case ENightPropId::DraftB:
+		bDraftB = true;
+		ShowNote(NightSchoolStory::DraftTitleB(), NightSchoolStory::DraftBodyB());
+		TryOpenGrade();
+		break;
+	case ENightPropId::DraftC:
+		bDraftC = true;
+		ShowNote(NightSchoolStory::DraftTitleC(), NightSchoolStory::DraftBodyC());
+		TryOpenGrade();
+		break;
+	case ENightPropId::NoticeE:
+		bNoticeE = true;
+		ShowNote(NightSchoolStory::NoticeTitleE(), NightSchoolStory::NoticeBodyE());
+		break;
+	case ENightPropId::NoticeF:
+		bNoticeF = true;
+		ShowNote(NightSchoolStory::NoticeTitleF(), NightSchoolStory::NoticeBodyF());
+		break;
+	case ENightPropId::NoticeG:
+		bNoticeG = true;
+		ShowNote(NightSchoolStory::NoticeTitleG(), NightSchoolStory::NoticeBodyG());
+		break;
+	case ENightPropId::NoticeH:
+		bNoticeH = true;
+		ShowNote(NightSchoolStory::NoticeTitleH(), NightSchoolStory::NoticeBodyH());
+		break;
+	case ENightPropId::AnnexDoor:
+		if (!bGradeOpen || !bSeal4Set)
+		{
+			ShowNote(TEXT("长榜"), NightSchoolStory::AnnexLocked());
+			break;
+		}
+		bAnnexOpen = true;
+		Prop->OpenDoor();
+		SpawnAnnexGhost();
+		break;
+	case ENightPropId::ChartA:
+		bChartA = true;
+		ShowNote(NightSchoolStory::ChartTitleA(), NightSchoolStory::ChartBodyA());
+		break;
+	case ENightPropId::ChartB:
+		bChartB = true;
+		ShowNote(NightSchoolStory::ChartTitleB(), NightSchoolStory::ChartBodyB());
+		break;
+	case ENightPropId::ChartC:
+		bChartC = true;
+		ShowNote(NightSchoolStory::ChartTitleC(), NightSchoolStory::ChartBodyC());
+		break;
+	case ENightPropId::StampAnte:
+		if (!bSeal1Held || bSeal1Set)
+		{
+			ShowNote(TEXT("木板"), bSeal1Set ? NightSchoolStory::StampDone1() : NightSchoolStory::StampIdle());
+			break;
+		}
+		bSeal1Held = false;
+		bSeal1Set = true;
+		bHallOpen = true;
+		if (ANightSchoolProp* Door = FindProp(ENightPropId::HallDoor))
+		{
+			Door->OpenDoor();
+		}
+		ShowNote(TEXT("第一章"), NightSchoolStory::StampDone1());
+		break;
+	case ENightPropId::StampDuty:
+		if (!bSeal2Held || bSeal2Set)
+		{
+			ShowNote(TEXT("章"), bSeal2Set ? NightSchoolStory::StampDone2() : NightSchoolStory::StampIdle());
+			break;
+		}
+		bSeal2Held = false;
+		bSeal2Set = true;
+		ShowNote(TEXT("第二章"), NightSchoolStory::StampDone2());
+		break;
+	case ENightPropId::StampCall:
+		if (!bSeal3Held || bSeal3Set)
+		{
+			ShowNote(TEXT("章"), bSeal3Set ? NightSchoolStory::StampDone3() : NightSchoolStory::StampIdle());
+			break;
+		}
+		bSeal3Held = false;
+		bSeal3Set = true;
+		ShowNote(TEXT("第三章"), NightSchoolStory::StampDone3());
+		break;
+	case ENightPropId::StampClass:
+		if (!bSeal4Held || bSeal4Set)
+		{
+			ShowNote(TEXT("章"), bSeal4Set ? NightSchoolStory::StampDone4() : NightSchoolStory::StampIdle());
+			break;
+		}
+		bSeal4Held = false;
+		bSeal4Set = true;
+		ShowNote(TEXT("第四章"), NightSchoolStory::StampDone4());
+		break;
+	case ENightPropId::StampDorm:
+		if (!bSeal5Held || bSeal5Set)
+		{
+			ShowNote(TEXT("章"), bSeal5Set ? NightSchoolStory::StampDone5() : NightSchoolStory::StampIdle());
+			break;
+		}
+		bSeal5Held = false;
+		bSeal5Set = true;
+		ShowNote(TEXT("第五章"), NightSchoolStory::StampDone5());
+		break;
+	case ENightPropId::SelfFigure:
+		bSawSelf = true;
+		ShowNote(NightSchoolStory::SelfTitle(), NightSchoolStory::SelfBody());
 		break;
 	default:
 		break;

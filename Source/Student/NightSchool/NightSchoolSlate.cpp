@@ -45,6 +45,15 @@ public:
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 8.f, 0.f, 0.f)
 				[
+					SAssignNew(ChapterText, STextBlock)
+					.Font(SmallFont)
+					.ColorAndOpacity(FLinearColor(0.93f, 0.72f, 0.48f))
+					.AutoWrapText(true)
+					.WrapTextAt(560.f)
+					.WrappingPolicy(ETextWrappingPolicy::AllowPerCharacterWrapping)
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 8.f, 0.f, 0.f)
+				[
 					SAssignNew(StatsText, STextBlock)
 					.Font(SmallFont)
 					.ColorAndOpacity(Dim)
@@ -99,7 +108,7 @@ public:
 					.Font(SmallFont)
 					.ColorAndOpacity(FLinearColor(0.62f, 0.58f, 0.5f))
 					.Justification(ETextJustify::Center)
-					.Text(FText::FromString(TEXT("WASD 移动    鼠标 环顾    Shift 跑    Ctrl 蹲    E 交互    F 手电    Q 合上")))
+					.Text(FText::FromString(TEXT("WASD 移动    鼠标 环顾    Shift 跑    Ctrl 蹲    E 交互    F 那点光    Q 合上或跳过看房")))
 				]
 			]
 			+ SOverlay::Slot()
@@ -225,7 +234,23 @@ public:
 			{
 				PromptText->SetText(FText::GetEmpty());
 			}
+			if (ChapterText.IsValid())
+			{
+				ChapterText->SetText(FText::GetEmpty());
+			}
 			return;
+		}
+
+		FString ChapterLine = Director->GetChapterLine();
+		const FString PreviewLine = Director->GetPreviewLine();
+		if (!PreviewLine.IsEmpty())
+		{
+			ChapterLine += TEXT("\n");
+			ChapterLine += PreviewLine;
+		}
+		if (ChapterText.IsValid())
+		{
+			ChapterText->SetText(FText::FromString(ChapterLine));
 		}
 
 		const float Mind = 1.f - FMath::Clamp(Director->GetFear() / 100.f, 0.f, 1.f);
@@ -284,6 +309,7 @@ private:
 
 	TWeakObjectPtr<ANightSchoolCharacter> Character;
 	TSharedPtr<STextBlock> TitleText;
+	TSharedPtr<STextBlock> ChapterText;
 	TSharedPtr<STextBlock> StatsText;
 	TSharedPtr<STextBlock> ObjectiveText;
 	TSharedPtr<STextBlock> StatusText;
