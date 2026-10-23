@@ -199,6 +199,16 @@ void ANightSchoolCharacter::SetReading(bool bInReading)
 	}
 }
 
+void ANightSchoolCharacter::SetPreviewing(bool bInPreview)
+{
+	bPreviewing = bInPreview;
+	if (bPreviewing)
+	{
+		bSprintHeld = false;
+		GetCharacterMovement()->StopMovementImmediately();
+	}
+}
+
 void ANightSchoolCharacter::SetEnded(bool bInEnded)
 {
 	bEnded = bInEnded;
@@ -319,7 +329,7 @@ void ANightSchoolCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 		Enhanced->BindAction(FlashlightAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::ToggleFlashlight);
 		Enhanced->BindAction(CloseAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::CloseReading);
 		Enhanced->BindAction(RestartAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::RequestRestart);
-		Enhanced->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		Enhanced->BindAction(JumpAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::TryJump);
 		Enhanced->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 	}
 	else
@@ -331,7 +341,7 @@ void ANightSchoolCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 
 void ANightSchoolCharacter::Move(const FInputActionValue& Value)
 {
-	if (bReading || bEnded || !Controller)
+	if (bReading || bPreviewing || bEnded || !Controller)
 	{
 		return;
 	}
@@ -342,7 +352,7 @@ void ANightSchoolCharacter::Move(const FInputActionValue& Value)
 
 void ANightSchoolCharacter::Look(const FInputActionValue& Value)
 {
-	if (!Controller)
+	if (!Controller || bPreviewing || bReading || bEnded)
 	{
 		return;
 	}
@@ -353,7 +363,7 @@ void ANightSchoolCharacter::Look(const FInputActionValue& Value)
 
 void ANightSchoolCharacter::SprintStarted()
 {
-	bSprintHeld = !bReading && !bEnded;
+	bSprintHeld = !bReading && !bPreviewing && !bEnded;
 }
 
 void ANightSchoolCharacter::SprintStopped()
@@ -363,7 +373,7 @@ void ANightSchoolCharacter::SprintStopped()
 
 void ANightSchoolCharacter::CrouchStarted()
 {
-	if (!bReading && !bEnded)
+	if (!bReading && !bPreviewing && !bEnded)
 	{
 		Crouch();
 	}
@@ -376,7 +386,7 @@ void ANightSchoolCharacter::CrouchStopped()
 
 void ANightSchoolCharacter::Interact()
 {
-	if (bReading || bEnded)
+	if (bReading || bPreviewing || bEnded)
 	{
 		return;
 	}
@@ -404,9 +414,23 @@ void ANightSchoolCharacter::CloseReading()
 	}
 	if (ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld()))
 	{
+		if (Director->IsPreviewing())
+		{
+			Director->SkipPreview();
+			return;
+		}
 		Director->CloseNote();
 	}
 	bReading = false;
+}
+
+void ANightSchoolCharacter::TryJump()
+{
+	if (bPreviewing || bReading || bEnded)
+	{
+		return;
+	}
+	Jump();
 }
 
 void ANightSchoolCharacter::RequestRestart()

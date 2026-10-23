@@ -5,10 +5,20 @@
 #include "NightSchoolTypes.h"
 #include "NightSchoolDirector.generated.h"
 
+class ACameraActor;
 class ANightSchoolApparition;
 class ANightSchoolCharacter;
 class ANightSchoolProp;
 class APointLight;
+
+/** 第一次走进房间时，镜头要扫过的范围。 */
+struct FNightRoomView
+{
+	FName Id;
+	FBox Bounds;
+	FString Name;
+	bool bSeen = false;
+};
 class UAudioComponent;
 class USceneComponent;
 class USoundWaveProcedural;
@@ -31,7 +41,9 @@ public:
 	void CloseNote();
 
 	bool IsNoteOpen() const { return bNoteOpen; }
+	bool IsPreviewing() const { return bPreviewing; }
 	bool IsEnding() const { return CurrentEnding != ENightEnding::None; }
+	void SkipPreview();
 	bool IsWearingEarplugs() const { return bWearingEarplugs; }
 	bool GetLurePoint(const FBox& Room, FVector& OutPoint) const;
 	const FString& GetNoteTitle() const { return NoteTitle; }
@@ -42,9 +54,12 @@ public:
 	float GetFear() const { return Fear; }
 	ENightEnding GetEnding() const { return CurrentEnding; }
 	FString GetObjective() const;
+	FString GetChapterLine() const;
+	FString GetPreviewLine() const;
 	FString GetFacingLine() const;
 	FString GetThreadsLine() const;
 	FString GetItemsLine() const;
+	int32 GetChapterIndex() const;
 
 	static ANightSchoolDirector* Find(UWorld* World);
 
@@ -68,12 +83,25 @@ private:
 	void SpawnShopGhost();
 	void SpawnNoticeGhost();
 	void SpawnComputerGhost();
+	void SpawnAnnexGhost();
 	int32 DutyCount() const;
 	int32 NoteCount() const;
 	int32 MinutesCount() const;
 	int32 NoticeCount() const;
 	int32 EssayCount() const;
+	int32 CallCount() const;
+	int32 ClassCount() const;
+	int32 ReceiptCount() const;
+	int32 DraftCount() const;
+	int32 ChartCount() const;
 	bool HasAllItems() const;
+	void GrantSeals();
+	void TryOpenGrade();
+	void BuildRooms();
+	void BuildSelfFigure();
+	void TickPreview(float DeltaSeconds);
+	void TryBeginPreview();
+	void BeginRoomPreview(FNightRoomView& Room);
 
 	void ShowNote(const TCHAR* InTitle, const TCHAR* InBody);
 	void ShowStatus(const FString& Line, float Seconds);
@@ -183,4 +211,54 @@ private:
 	bool bComputerGhost = false;
 	bool bShopSodaTaken = false;
 	bool bSpareTaken = false;
+	bool bCallA = false;
+	bool bCallB = false;
+	bool bCallC = false;
+	bool bClassA = false;
+	bool bClassB = false;
+	bool bClassC = false;
+	bool bReceiptA = false;
+	bool bReceiptB = false;
+	bool bReceiptC = false;
+	bool bDraftA = false;
+	bool bDraftB = false;
+	bool bDraftC = false;
+	bool bChartA = false;
+	bool bChartB = false;
+	bool bChartC = false;
+	bool bNoticeE = false;
+	bool bNoticeF = false;
+	bool bNoticeG = false;
+	bool bNoticeH = false;
+	bool bSeal1Held = false;
+	bool bSeal1Set = false;
+	bool bSeal2Held = false;
+	bool bSeal2Set = false;
+	bool bSeal3Held = false;
+	bool bSeal3Set = false;
+	bool bSeal4Held = false;
+	bool bSeal4Set = false;
+	bool bSeal5Held = false;
+	bool bSeal5Set = false;
+	bool bStoreOpen = false;
+	bool bAnnexOpen = false;
+	bool bAnnexGhost = false;
+	bool bSawSelf = false;
+	bool bPreviewing = false;
+	bool bPreviewReturning = false;
+
+	TArray<FNightRoomView> RoomViews;
+	TArray<FVector> PreviewPoints;
+	FVector PreviewLook = FVector::ZeroVector;
+	FString PreviewCaption;
+	FString ChapterBanner;
+	int32 ShownChapter = 0;
+	float ChapterBannerTime = 0.f;
+	float PreviewTime = 0.f;
+	float PreviewDuration = 1.f;
+	float PreviewReturnLeft = 0.f;
+	float PreviewHold = 1.f;
+
+	UPROPERTY()
+	TObjectPtr<ACameraActor> PreviewCamera;
 };

@@ -22,7 +22,7 @@ namespace NightSchoolStory
 
 	const TCHAR* ClothEarly()
 	{
-		return TEXT("抽屉里有一块布。老吴写了顺序：先看宿舍里那四通未接来电，再把他的三页值班记录读完。顺序不是刁难。他不想再替你做一次决定。");
+		return TEXT("抽屉里有一块布。老吴写了顺序：先看宿舍里的未接来电，再读西边通话间的三页，和他的三页值班记录。顺序不是刁难。他不想再替你做一次决定。");
 	}
 
 	const TCHAR* CoinTitle() { return TEXT("午饭钱"); }
@@ -57,7 +57,7 @@ namespace NightSchoolStory
 
 	const TCHAR* DeskEarly()
 	{
-		return TEXT("你坐下了。椅子是凉的。可这圈空着的原因还没齐。\n\n江晚的条子散在四处：空位旁边一张，走廊一张，小卖部柜台里一张，宿舍北面储物柜一张。凑齐四张，再坐一次。\n\n这一次只算你看见了空位，还不算你留下。");
+		return TEXT("你坐下了。椅子是凉的。可这圈空着的原因还没齐。\n\n江晚的条子有四张。教室里还有三页班级日志。凑齐，再坐一次。\n\n这一次只算你看见了空位，还不算你留下。");
 	}
 
 	const TCHAR* LedgerTitle() { return TEXT("请客账"); }
@@ -80,7 +80,7 @@ namespace NightSchoolStory
 	const TCHAR* MinutesLiangTitle() { return TEXT("年级会议 · 页边"); }
 	const TCHAR* MinutesLiangBody()
 	{
-		return TEXT("梁老师在孙老师那段话旁边写：知道。\n\n又换了一支笔，压得很重：约谈的时候许知夏不看我。当众念，至少还红一次脸。我恨的是那份不急。\n\n这行字写到一半，笔尖把纸戳破了。破口的后面没有血，只有下一页的会议时间。恨写在纸上，仍然是恨。它没有因此变成关心。");
+		return TEXT("梁老师在孙老师那段话旁边写：知道。\n\n又换了一支笔，压得很重：约谈的时候他不看我。当众念，他至少还红一次脸。我恨的是他不急。\n\n这行字写到一半，笔尖把纸戳破了。破口的后面没有血，只有下一页的会议时间。恨写在纸上，仍然是恨。它没有因此变成关心。");
 	}
 
 	const TCHAR* MinutesParentTitle() { return TEXT("年级会议 · 家委会"); }
@@ -187,7 +187,7 @@ namespace NightSchoolStory
 
 	const TCHAR* GradeLocked()
 	{
-		return TEXT("年级组的门关着。梁老师的字条还在办公室桌上。那张字条会让这扇门开，不会替你把会议记录读完。");
+		return TEXT("年级组的门关着。先把办公室里的三页改卷批注看完，再读梁老师的字条。字条不会替你把会议记录读完。");
 	}
 
 	const TCHAR* ComputerLocked()

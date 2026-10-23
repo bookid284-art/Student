@@ -28,6 +28,7 @@ public:
 	virtual void GetActorEyesViewPoint(FVector& OutLocation, FRotator& OutRotation) const override;
 
 	bool IsReading() const { return bReading; }
+	bool IsPreviewing() const { return bPreviewing; }
 	bool IsEnded() const { return bEnded; }
 	bool IsFlashlightOn() const { return bFlashlightOn; }
 	float GetBattery() const { return Battery; }
@@ -36,6 +37,7 @@ public:
 	bool IsFlashlightHitting(const FVector& WorldPoint) const;
 	AActor* GetFocusedActor() const;
 	void SetReading(bool bInReading);
+	void SetPreviewing(bool bInPreview);
 	void SetEnded(bool bInEnded);
 	void RefillBattery(float Amount);
 
@@ -55,6 +57,7 @@ private:
 	void ToggleFlashlight();
 	void CloseReading();
 	void RequestRestart();
+	void TryJump();
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UCameraComponent> Camera;
@@ -103,6 +106,7 @@ private:
 	bool bSprintHeld = false;
 	bool bExhausted = false;
 	bool bReading = false;
+	bool bPreviewing = false;
 	bool bEnded = false;
 	bool bFlashlightOn = false;
 	float Battery = 100.f;
