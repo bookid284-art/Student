@@ -261,21 +261,22 @@ ANightSchoolProp* ANightSchoolDirector::FindProp(ENightPropId Id) const
 	return nullptr;
 }
 
-void ANightSchoolDirector::SpawnGhost(const FBox& Room, const TArray<FVector>& Points, const FString& Glyph)
+ANightSchoolApparition* ANightSchoolDirector::SpawnGhost(const FBox& Room, const TArray<FVector>& Points, const FString& Glyph)
 {
 	if (!GetWorld() || Points.Num() == 0)
 	{
-		return;
+		return nullptr;
 	}
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	ANightSchoolApparition* Ghost = GetWorld()->SpawnActor<ANightSchoolApparition>(ANightSchoolApparition::StaticClass(), FTransform(FRotator::ZeroRotator, Points[0]), Params);
 	if (!Ghost)
 	{
-		return;
+		return nullptr;
 	}
 	Ghost->Configure(Room, Points, Glyph);
 	Apparitions.Add(Ghost);
+	return Ghost;
 }
 
 void ANightSchoolDirector::BuildWorld()
@@ -295,6 +296,7 @@ void ANightSchoolDirector::BuildWorld()
 	BuildLights();
 	BuildRooms();
 	BuildSelfFigure();
+	BuildCheckpoints();
 	BuildAudio();
 	PreviewHold = 1.1f;
 	ShowStatus(TEXT("第一章。手机在西边的宿舍里亮着。这间屋一共六章。"), 12.f);
@@ -1183,7 +1185,7 @@ void ANightSchoolDirector::BeginRoomPreview(FNightRoomView& Room)
 	PreviewDuration = 10.f;
 	bPreviewReturning = false;
 	bPreviewing = true;
-	PreviewCaption = FString::Printf(TEXT("第一次走进%s。镜头把这间屋走一遍。按 Q 跳过。"), *Room.Name);
+	PreviewCaption = FString::Printf(TEXT("第一次走进%s。镜头把这间屋走一遍。按 Tab 跳过。"), *Room.Name);
 	PreviewCamera->SetActorLocation(PreviewPoints[0]);
 	PreviewCamera->SetActorRotation((PreviewLook - PreviewPoints[0]).Rotation());
 	Controller->SetViewTargetWithBlend(PreviewCamera, 0.35f, VTBlend_Cubic, 0.f, false);
@@ -1271,6 +1273,7 @@ void ANightSchoolDirector::Tick(float DeltaSeconds)
 	}
 	FearLock = FMath::Max(0.f, FearLock - DeltaSeconds);
 	GrantSeals();
+	EnsureOpeningCheckpoint();
 	const int32 ChapterNow = GetChapterIndex();
 	if (ChapterNow != ShownChapter)
 	{
@@ -1282,6 +1285,7 @@ void ANightSchoolDirector::Tick(float DeltaSeconds)
 	PreviewHold = FMath::Max(0.f, PreviewHold - DeltaSeconds);
 	TickPreview(DeltaSeconds);
 	TryBeginPreview();
+	TickPuzzle(DeltaSeconds);
 	if (!IsEnding() && !bNoteOpen && !bPreviewing)
 	{
 		LureTime = FMath::Max(0.f, LureTime - DeltaSeconds);
@@ -1393,7 +1397,7 @@ FString ANightSchoolDirector::GetObjective() const
 	}
 	if (!bPhoneRead)
 	{
-		return TEXT("西边是宿舍。先看那只每天都响的手机。");
+		return TEXT("西边是宿舍。先看那只每天都响的手机。每间屋有一座红印台，按 G 记下。解不开就从上一座再来。");
 	}
 	if (CallCount() < 3)
 	{
@@ -1402,6 +1406,10 @@ FString ANightSchoolDirector::GetObjective() const
 	if (DutyCount() < 3)
 	{
 		return TEXT("南边值班室有老吴的三页记录。读完，再开那只抽屉。");
+	}
+	if (!bPuzzle1)
+	{
+		return TEXT("通话间墙上写着三个数字。把三环转到那三个数。按下去之后它们会走过来。八十秒，拨不完就退回印台。");
 	}
 	if (!bHasCloth && !bCameraCovered)
 	{
@@ -1427,6 +1435,10 @@ FString ANightSchoolDirector::GetObjective() const
 	{
 		return TEXT("教室里还有三页班级日志。看完再坐那张空位。");
 	}
+	if (!bPuzzle2)
+	{
+		return TEXT("教室墙上有三个数字。空位上的人还在走。八十秒。");
+	}
 	if (!bSatAlone)
 	{
 		return TEXT("条子和日志都齐了。在那张没有人肯同桌的空位上坐下。");
@@ -1442,6 +1454,10 @@ FString ANightSchoolDirector::GetObjective() const
 	if (ReceiptCount() < 3)
 	{
 		return TEXT("卷帘后面还有后仓。三张收据看完，账本才肯被拿走。");
+	}
+	if (!bPuzzle3)
+	{
+		return TEXT("小卖部墙上有三个数字。账还在货架之间。八十秒。");
 	}
 	if (!bLedgerPosted)
 	{
@@ -1467,6 +1483,10 @@ FString ANightSchoolDirector::GetObjective() const
 	{
 		return TEXT("办公室里有三页改卷批注。看完，年级组才开。");
 	}
+	if (!bPuzzle4)
+	{
+		return TEXT("办公室墙上有三个数字。这间屋会进来人。八十秒。");
+	}
 	if (!bTeacherRead)
 	{
 		return TEXT("读梁老师留在桌上的那张字条。");
@@ -1482,6 +1502,10 @@ FString ANightSchoolDirector::GetObjective() const
 	if (NoticeCount() < 8)
 	{
 		return TEXT("北廊四张，再往北的长榜还有四张。八张都要看。");
+	}
+	if (!bPuzzle5)
+	{
+		return TEXT("长榜墙上有三个数字。榜上的人还在走。八十秒。");
 	}
 	if (!bSeal5Set)
 	{
@@ -1502,6 +1526,10 @@ FString ANightSchoolDirector::GetObjective() const
 	if (!bItemsReturned)
 	{
 		return TEXT("铅笔盒在储物柜，月票在微机室，课表在南边洗衣间。三样放到托盘上。");
+	}
+	if (!bPuzzle6)
+	{
+		return TEXT("校医室墙上有三个数字。柜开着的时候有人进来。八十秒。");
 	}
 	if (!bZhouHeard)
 	{
@@ -1566,6 +1594,15 @@ FString ANightSchoolDirector::GetChapterLine() const
 FString ANightSchoolDirector::GetPreviewLine() const
 {
 	return bPreviewing ? PreviewCaption : FString();
+}
+
+FString ANightSchoolDirector::GetPuzzleLine() const
+{
+	if (ActivePuzzle < 0)
+	{
+		return FString();
+	}
+	return FString::Printf(TEXT("还剩 %d 秒。人在往这边走。拨不完就退回印台。"), FMath::CeilToInt(PuzzleTime));
 }
 
 FString ANightSchoolDirector::GetFacingLine() const
@@ -1638,6 +1675,8 @@ FString ANightSchoolDirector::GetThreadsLine() const
 		ChartCount(),
 		Items,
 		EssayCount());
+	const int32 Rings = (bPuzzle1 ? 1 : 0) + (bPuzzle2 ? 1 : 0) + (bPuzzle3 ? 1 : 0) + (bPuzzle4 ? 1 : 0) + (bPuzzle5 ? 1 : 0) + (bPuzzle6 ? 1 : 0);
+	Line += FString::Printf(TEXT("  环 %d/6"), Rings);
 	if (bCoin && !bCoinSpent)
 	{
 		Line += TEXT("  ·硬币");
@@ -1748,6 +1787,11 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		ShowStatus(bWearingEarplugs ? TEXT("耳塞回到耳朵里。世界远了一点。") : TEXT("你把耳塞拿下来。声音重新贴着头皮。"), 3.4f);
 		break;
 	case ENightPropId::LensCloth:
+		if (!bPuzzle1 && bPhoneRead && DutyCount() >= 3 && CallCount() >= 3)
+		{
+			ShowNote(TEXT("抽屉"), TEXT("三环还没对上。数字写在通话间的墙上。八十秒，它们会走过来。拨不完就退回印台。"));
+			break;
+		}
 		if (!bPhoneRead || DutyCount() < 3 || CallCount() < 3)
 		{
 			ShowNote(TEXT("抽屉"), NightSchoolStory::ClothEarly());
@@ -1821,6 +1865,11 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		}
 		break;
 	case ENightPropId::UnwantedDesk:
+		if (NoteCount() >= 4 && ClassCount() >= 3 && !bPuzzle2)
+		{
+			ShowNote(TEXT("空位"), TEXT("教室墙上的三个数字还没拨完。人还在教室里走。八十秒。"));
+			break;
+		}
 		if (NoteCount() < 4 || ClassCount() < 3)
 		{
 			ShowNote(TEXT("空位"), NightSchoolStory::DeskEarly());
@@ -1863,6 +1912,11 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		Prop->OpenDoor();
 		break;
 	case ENightPropId::TeacherNote:
+		if (DraftCount() >= 3 && !bPuzzle4)
+		{
+			ShowNote(TEXT("字条"), TEXT("墙上的三个数字还没拨完。这间屋会进来人。八十秒。"));
+			break;
+		}
 		if (DraftCount() < 3)
 		{
 			ShowNote(TEXT("字条"), NightSchoolStory::NeedDrafts());
@@ -1873,6 +1927,11 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		TryOpenGrade();
 		break;
 	case ENightPropId::InfirmaryDoor:
+		if (bTeacherRead && MinutesCount() >= 3 && NoticeCount() >= 8 && bSeal5Set && !bPuzzle5)
+		{
+			ShowNote(TEXT("校医室"), TEXT("长榜墙上的三个数字还没拨完。榜上的人还在走。八十秒。"));
+			break;
+		}
 		if (!bTeacherRead || MinutesCount() < 3 || NoticeCount() < 8 || !bSeal5Set)
 		{
 			ShowNote(TEXT("校医室"), NightSchoolStory::LockedInfirmary());
@@ -1901,6 +1960,11 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 				Prop->SetPrompt(FText::FromString(TEXT("三样东西还没放上托盘")));
 			}
 			ShowNote(NightSchoolStory::ZhouIntroTitle(), NightSchoolStory::ZhouIntroBody());
+			break;
+		}
+		if (!bPuzzle6)
+		{
+			ShowNote(TEXT("药柜"), TEXT("墙上的三个数字还没拨完。八十秒。人会在这间屋里走。拨不完就退回印台。"));
 			break;
 		}
 		bZhouHeard = true;
@@ -2012,6 +2076,11 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		ShowStatus(TEXT("卷帘上去了。这不是请客。账在柜台底下。"), 4.5f);
 		break;
 	case ENightPropId::Ledger:
+		if (ReceiptCount() >= 3 && !bPuzzle3)
+		{
+			ShowNote(TEXT("账本"), TEXT("小卖部墙上的三个数字还没拨完。账还在货架之间。八十秒。"));
+			break;
+		}
 		if (ReceiptCount() < 3)
 		{
 			ShowNote(TEXT("账本"), NightSchoolStory::NeedReceipts());
@@ -2331,6 +2400,15 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 	case ENightPropId::SelfFigure:
 		bSawSelf = true;
 		ShowNote(NightSchoolStory::SelfTitle(), NightSchoolStory::SelfBody());
+		break;
+	case ENightPropId::InkPad:
+		UseInkPad(Prop);
+		break;
+	case ENightPropId::Dial:
+		UseDial(Prop);
+		break;
+	case ENightPropId::DialConfirm:
+		UseDialConfirm(Prop);
 		break;
 	default:
 		break;

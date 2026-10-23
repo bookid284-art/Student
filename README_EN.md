@@ -4,9 +4,9 @@ Xu Zhixia is a boarding science student in the last year of high school. Xu Guif
 
 Under that pressure he hallucinates a second set of rooms, where the malice has a body. There is no combat. Earplugs, a lens cloth, a bottle of soda, and a light that has not gone out are only for stalling and slipping past. Mr. Zhou, retired from the infirmary, explains the two doors. One is opened by hand, and an inner light leads out of the rooms. The other is shut from inside a closet, and he stays.
 
-Play stays in the first-person view already in this project. The first time a room is entered, code sweeps a camera around it. Q skips that look.
+Play stays in the first-person view already in this project. The first time a room is entered, code sweeps a camera around it. Tab skips that look. Hold Q to lean left and E to lean right, and look around a corner without stepping out.
 
-The clear is six chapters. Each one ends by stamping a seal before the next door accepts you. Read, double back, and hide, and one clear is meant to take about six hours. Skipping the sentences makes it shorter. This environment has no Unreal Editor, so that length was not timed in Play.
+The clear is six chapters. Each one ends by stamping a seal before the next door accepts you. Every room has a red ink pad. Press G there to mark your place. Six sets of three rings have to be turned while someone is walking toward you. Each set lasts eighty seconds. If the rings are still wrong when the time runs out, you return to the last ink pad. That return is not a third ending. Read, double back, and hide, and one clear is meant to take about six hours. Skipping the sentences makes it shorter. This environment has no Unreal Editor, so that length was not timed in Play.
 
 ## Six chapters
 
@@ -19,6 +19,8 @@ The clear is six chapters. Each one ends by stamping a seal before the next door
 
 Three essays can still be left on the bench. Doing so adds a line to the leaving ending. Either ending can be reached without them.
 
+The six rings are in the call room, classroom, shop, office, long board, and infirmary. The digits are written on that room's wall. Press G to turn the three wheels, then confirm. Someone walks the room while you do it. Eighty seconds, then you are sent back to the last ink pad. Hold Q or E against a wall to lean out and read the digits.
+
 Jiang Wan's notes are not a romance. She almost sat there, then did not. The coin only opens the shop. Lin Xiaoman has already graduated; returning her pencil case, bus pass, and timetable does not rescue her. A second bottle is in the shop, and a spare cell is in the infirmary. The battery feeds the small light used to make figures step back.
 
 ## Play
@@ -27,7 +29,8 @@ Open `Student.uproject` with the Unreal Engine 5.7 install already associated wi
 
 - WASD move, mouse look
 - Shift sprint, Ctrl crouch
-- E interact, F the small light, Q close a note or skip the first look around a room
+- Hold Q to lean left, hold E to lean right
+- G interact, F the small light, Tab close a note or skip the first look around a room
 - R on an ending screen walks the corridor again
 
 The light makes the faceless classmates step back. Crouching makes them lose you. Soda draws them for about eighteen seconds. None of this causes harm. Full pressure does not end the game. Earplugs shorten their sight, and they have to come off before the switch. The cloth only covers the dorm camera.

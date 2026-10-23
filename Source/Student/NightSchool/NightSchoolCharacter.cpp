@@ -3,6 +3,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SpotLightComponent.h"
+#include "Engine/World.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -59,7 +60,7 @@ ANightSchoolCharacter::ANightSchoolCharacter()
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(GetCapsuleComponent());
 	Camera->SetRelativeLocation(FVector(0.f, 0.f, 64.f));
-	Camera->bUsePawnControlRotation = true;
+	Camera->bUsePawnControlRotation = false;
 	Camera->SetFieldOfView(78.f);
 
 	Flashlight = CreateDefaultSubobject<USpotLightComponent>(TEXT("Flashlight"));
@@ -114,6 +115,7 @@ void ANightSchoolCharacter::Tick(float DeltaSeconds)
 	if (bEnded)
 	{
 		GetCharacterMovement()->StopMovementImmediately();
+		UpdateLean(DeltaSeconds);
 		return;
 	}
 
@@ -135,14 +137,19 @@ void ANightSchoolCharacter::Tick(float DeltaSeconds)
 		}
 	}
 
+	UpdateLean(DeltaSeconds);
 	float Speed = WalkSpeed;
 	if (bIsCrouched)
 	{
 		Speed = CrouchSpeed;
 	}
-	else if (bSprintHeld && !bExhausted && !bReading)
+	else if (bSprintHeld && !bExhausted && !bReading && FMath::Abs(LeanAlpha) < 0.2f)
 	{
 		Speed = SprintSpeed;
+	}
+	if (FMath::Abs(LeanAlpha) >= 0.2f)
+	{
+		Speed *= 0.62f;
 	}
 	GetCharacterMovement()->MaxWalkSpeed = Speed;
 
@@ -205,8 +212,101 @@ void ANightSchoolCharacter::SetPreviewing(bool bInPreview)
 	if (bPreviewing)
 	{
 		bSprintHeld = false;
+		bLeanLeft = false;
+		bLeanRight = false;
 		GetCharacterMovement()->StopMovementImmediately();
 	}
+}
+
+void ANightSchoolCharacter::ApplyResume(const FVector& Location, const FRotator& View, float InBattery, float InStamina, bool bWasCrouched, bool bLightOn)
+{
+	SetActorLocation(Location);
+	if (Controller)
+	{
+		Controller->SetControlRotation(View);
+	}
+	Battery = FMath::Clamp(InBattery, 0.f, 100.f);
+	Stamina = FMath::Clamp(InStamina, 0.f, MaxStamina);
+	bExhausted = Stamina < MaxStamina * 0.4f;
+	bFlashlightOn = bLightOn && Battery > 1.f;
+	bLeanLeft = false;
+	bLeanRight = false;
+	LeanAlpha = 0.f;
+	if (Camera)
+	{
+		Camera->SetRelativeLocation(FVector(0.f, 0.f, 64.f));
+		Camera->SetWorldRotation(View);
+	}
+	if (bWasCrouched)
+	{
+		Crouch();
+	}
+	else
+	{
+		UnCrouch();
+	}
+}
+
+void ANightSchoolCharacter::UpdateLean(float DeltaSeconds)
+{
+	if (!Camera)
+	{
+		return;
+	}
+	float Desired = 0.f;
+	if (!bPreviewing && !bReading && !bEnded)
+	{
+		if (bLeanLeft && !bLeanRight)
+		{
+			Desired = -1.f;
+		}
+		else if (bLeanRight && !bLeanLeft)
+		{
+			Desired = 1.f;
+		}
+	}
+	LeanAlpha = FMath::FInterpTo(LeanAlpha, Desired, DeltaSeconds, 8.f);
+	const float Side = LeanAlpha * 34.f;
+	const float Forward = FMath::Abs(LeanAlpha) * 12.f;
+	const FVector Base = GetActorLocation() + FVector(0.f, 0.f, 64.f);
+	FVector DesiredWorld = GetActorTransform().TransformPosition(FVector(Forward, Side, 64.f));
+	if (GetWorld() && FMath::Abs(LeanAlpha) > 0.02f)
+	{
+		FHitResult Hit;
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(NightLean), false, this);
+		if (GetWorld()->LineTraceSingleByChannel(Hit, Base, DesiredWorld, ECC_Visibility, Params))
+		{
+			DesiredWorld = Hit.ImpactPoint + Hit.ImpactNormal * 10.f;
+		}
+	}
+	const FVector Relative = GetActorTransform().InverseTransformPosition(DesiredWorld);
+	Camera->SetRelativeLocation(FVector(Relative.X, Relative.Y, 64.f));
+	if (Controller)
+	{
+		FRotator View = Controller->GetControlRotation();
+		View.Roll = LeanAlpha * -8.f;
+		Camera->SetWorldRotation(View);
+	}
+}
+
+void ANightSchoolCharacter::LeanLeftStarted()
+{
+	bLeanLeft = !bPreviewing && !bReading && !bEnded;
+}
+
+void ANightSchoolCharacter::LeanLeftStopped()
+{
+	bLeanLeft = false;
+}
+
+void ANightSchoolCharacter::LeanRightStarted()
+{
+	bLeanRight = !bPreviewing && !bReading && !bEnded;
+}
+
+void ANightSchoolCharacter::LeanRightStopped()
+{
+	bLeanRight = false;
 }
 
 void ANightSchoolCharacter::SetEnded(bool bInEnded)
@@ -244,6 +344,8 @@ void ANightSchoolCharacter::EnsureInputAssets()
 	CloseAction = NewObject<UInputAction>(this);
 	RestartAction = NewObject<UInputAction>(this);
 	JumpAction = NewObject<UInputAction>(this);
+	LeanLeftAction = NewObject<UInputAction>(this);
+	LeanRightAction = NewObject<UInputAction>(this);
 
 	MappingContext = NewObject<UInputMappingContext>(this);
 	MapAxisKey(MappingContext, MoveAction, EKeys::W, false, true, this);
@@ -279,13 +381,17 @@ void ANightSchoolCharacter::EnsureInputAssets()
 	MappingContext->MapKey(CrouchAction, EKeys::LeftControl);
 	MappingContext->MapKey(CrouchAction, EKeys::RightControl);
 	MappingContext->MapKey(CrouchAction, EKeys::Gamepad_RightShoulder);
-	MappingContext->MapKey(InteractAction, EKeys::E);
+	MappingContext->MapKey(InteractAction, EKeys::G);
 	MappingContext->MapKey(InteractAction, EKeys::Gamepad_FaceButton_Bottom);
 	MappingContext->MapKey(FlashlightAction, EKeys::F);
 	MappingContext->MapKey(FlashlightAction, EKeys::Gamepad_FaceButton_Left);
-	MappingContext->MapKey(CloseAction, EKeys::Q);
+	MappingContext->MapKey(CloseAction, EKeys::Tab);
 	MappingContext->MapKey(CloseAction, EKeys::Escape);
 	MappingContext->MapKey(CloseAction, EKeys::Gamepad_FaceButton_Right);
+	MappingContext->MapKey(LeanLeftAction, EKeys::Q);
+	MappingContext->MapKey(LeanLeftAction, EKeys::Gamepad_DPad_Left);
+	MappingContext->MapKey(LeanRightAction, EKeys::E);
+	MappingContext->MapKey(LeanRightAction, EKeys::Gamepad_DPad_Right);
 	MappingContext->MapKey(RestartAction, EKeys::R);
 	MappingContext->MapKey(JumpAction, EKeys::SpaceBar);
 }
@@ -331,6 +437,12 @@ void ANightSchoolCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 		Enhanced->BindAction(RestartAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::RequestRestart);
 		Enhanced->BindAction(JumpAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::TryJump);
 		Enhanced->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		Enhanced->BindAction(LeanLeftAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::LeanLeftStarted);
+		Enhanced->BindAction(LeanLeftAction, ETriggerEvent::Completed, this, &ANightSchoolCharacter::LeanLeftStopped);
+		Enhanced->BindAction(LeanLeftAction, ETriggerEvent::Canceled, this, &ANightSchoolCharacter::LeanLeftStopped);
+		Enhanced->BindAction(LeanRightAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::LeanRightStarted);
+		Enhanced->BindAction(LeanRightAction, ETriggerEvent::Completed, this, &ANightSchoolCharacter::LeanRightStopped);
+		Enhanced->BindAction(LeanRightAction, ETriggerEvent::Canceled, this, &ANightSchoolCharacter::LeanRightStopped);
 	}
 	else
 	{

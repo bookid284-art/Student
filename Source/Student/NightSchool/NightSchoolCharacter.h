@@ -34,6 +34,8 @@ public:
 	float GetBattery() const { return Battery; }
 	float GetStamina() const { return Stamina; }
 	float GetMaxStamina() const { return MaxStamina; }
+	float GetLean() const { return LeanAlpha; }
+	void ApplyResume(const FVector& Location, const FRotator& View, float InBattery, float InStamina, bool bWasCrouched, bool bLightOn);
 	bool IsFlashlightHitting(const FVector& WorldPoint) const;
 	AActor* GetFocusedActor() const;
 	void SetReading(bool bInReading);
@@ -58,6 +60,11 @@ private:
 	void CloseReading();
 	void RequestRestart();
 	void TryJump();
+	void LeanLeftStarted();
+	void LeanLeftStopped();
+	void LeanRightStarted();
+	void LeanRightStopped();
+	void UpdateLean(float DeltaSeconds);
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UCameraComponent> Camera;
@@ -98,6 +105,12 @@ private:
 	UPROPERTY()
 	TObjectPtr<UInputAction> JumpAction;
 
+	UPROPERTY()
+	TObjectPtr<UInputAction> LeanLeftAction;
+
+	UPROPERTY()
+	TObjectPtr<UInputAction> LeanRightAction;
+
 	TSharedPtr<SWidget> HudWidget;
 
 	bool bInputReady = false;
@@ -115,4 +128,7 @@ private:
 	float WalkSpeed = 270.f;
 	float SprintSpeed = 490.f;
 	float CrouchSpeed = 150.f;
+	float LeanAlpha = 0.f;
+	bool bLeanLeft = false;
+	bool bLeanRight = false;
 };

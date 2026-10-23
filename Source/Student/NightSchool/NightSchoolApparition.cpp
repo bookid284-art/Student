@@ -115,7 +115,12 @@ ANightSchoolCharacter* ANightSchoolApparition::FindPlayer() const
 
 bool ANightSchoolApparition::CanSeePlayer(ANightSchoolCharacter* Player) const
 {
-	if (!Player || Player->IsEnded() || Player->IsReading() || Player->IsPreviewing())
+	const ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld());
+	if (!Player || Player->IsEnded() || Player->IsPreviewing())
+	{
+		return false;
+	}
+	if (Player->IsReading() && !(Director && Director->IsPuzzleActive()))
 	{
 		return false;
 	}
@@ -126,12 +131,9 @@ bool ANightSchoolApparition::CanSeePlayer(ANightSchoolCharacter* Player) const
 		return false;
 	}
 	float Sight = 820.f;
-	if (const ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld()))
+	if (Director && Director->IsWearingEarplugs())
 	{
-		if (Director->IsWearingEarplugs())
-		{
-			Sight = 380.f;
-		}
+		Sight = 380.f;
 	}
 	const float Distance = FVector::Dist(MyEyes, Target);
 	if (Distance > Sight)
@@ -157,13 +159,19 @@ void ANightSchoolApparition::NotifyActorBeginOverlap(AActor* OtherActor)
 {
 	Super::NotifyActorBeginOverlap(OtherActor);
 	ANightSchoolCharacter* Player = Cast<ANightSchoolCharacter>(OtherActor);
-	if (!Player || Player->IsEnded() || Player->IsReading() || Player->IsPreviewing() || HitCooldown > 0.f || StunRemaining > 0.f)
+	ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld());
+	const bool bPuzzle = Director && Director->IsPuzzleActive();
+	if (!Player || Player->IsEnded() || Player->IsPreviewing() || HitCooldown > 0.f || StunRemaining > 0.f)
 	{
 		return;
 	}
-	if (ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld()))
+	if (Player->IsReading() && !bPuzzle)
 	{
-		if (Director->IsEnding() || Director->IsNoteOpen() || Director->IsPreviewing())
+		return;
+	}
+	if (Director)
+	{
+		if (Director->IsEnding() || Director->IsPreviewing() || (Director->IsNoteOpen() && !bPuzzle))
 		{
 			return;
 		}
@@ -183,7 +191,8 @@ void ANightSchoolApparition::Tick(float DeltaSeconds)
 	StunRemaining = FMath::Max(0.f, StunRemaining - DeltaSeconds);
 
 	ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld());
-	if (Director && (Director->IsEnding() || Director->IsNoteOpen() || Director->IsPreviewing()))
+	const bool bPuzzle = Director && Director->IsPuzzleActive();
+	if (Director && (Director->IsEnding() || Director->IsPreviewing() || (Director->IsNoteOpen() && !bPuzzle)))
 	{
 		return;
 	}
