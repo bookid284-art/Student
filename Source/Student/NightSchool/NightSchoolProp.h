@@ -23,6 +23,7 @@ public:
 	void Configure(ENightPropId InId, const FVector& InExtent, const FLinearColor& InColor, const FText& InPrompt, const FVector& InSlide);
 	ENightPropId GetPropId() const { return PropId; }
 	const FText& GetPrompt() const;
+	void SetPrompt(const FText& InPrompt);
 	void SetAvailable(bool bInAvailable);
 	bool IsAvailable() const { return bAvailable; }
 	void OpenDoor();
@@ -36,7 +37,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<UStaticMeshComponent> Body;
 
-	ENightPropId PropId = ENightPropId::Notice;
+	ENightPropId PropId = ENightPropId::Phone;
 	FText Prompt;
 	FVector ClosedLocation = FVector::ZeroVector;
 	FVector OpenLocation = FVector::ZeroVector;

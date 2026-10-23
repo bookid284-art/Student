@@ -125,8 +125,16 @@ bool ANightSchoolApparition::CanSeePlayer(ANightSchoolCharacter* Player) const
 	{
 		return false;
 	}
+	float Sight = 820.f;
+	if (const ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld()))
+	{
+		if (Director->IsWearingEarplugs())
+		{
+			Sight = 380.f;
+		}
+	}
 	const float Distance = FVector::Dist(MyEyes, Target);
-	if (Distance > 820.f)
+	if (Distance > Sight)
 	{
 		return false;
 	}
@@ -202,11 +210,20 @@ void ANightSchoolApparition::Tick(float DeltaSeconds)
 		bChasing = false;
 	}
 
+	FVector LurePoint = FVector::ZeroVector;
+	const bool bLured = Director && Director->GetLurePoint(Room, LurePoint);
+
 	FVector Goal = GetActorLocation();
 	if (StunRemaining > 0.f && Player)
 	{
 		Goal = GetActorLocation() + (GetActorLocation() - Player->GetActorLocation()).GetSafeNormal() * 200.f;
 		GetCharacterMovement()->MaxWalkSpeed = 150.f;
+	}
+	else if (bLured)
+	{
+		Goal = LurePoint;
+		GetCharacterMovement()->MaxWalkSpeed = 130.f;
+		bChasing = false;
 	}
 	else if (bChasing && Player)
 	{
