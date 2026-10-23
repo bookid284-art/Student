@@ -43,6 +43,7 @@ public:
 	ENightEnding GetEnding() const { return CurrentEnding; }
 	FString GetObjective() const;
 	FString GetFacingLine() const;
+	FString GetThreadsLine() const;
 	FString GetItemsLine() const;
 
 	static ANightSchoolDirector* Find(UWorld* World);
@@ -61,8 +62,18 @@ private:
 	FBox HallRoom() const;
 	FBox ClassRoom() const;
 	bool IsInDorm(const FVector& Location) const;
+	bool AnyGhostContains(const FVector& Point) const;
 	void RefreshEarplugPrompt();
 	void SpawnHallGhosts();
+	void SpawnShopGhost();
+	void SpawnNoticeGhost();
+	void SpawnComputerGhost();
+	int32 DutyCount() const;
+	int32 NoteCount() const;
+	int32 MinutesCount() const;
+	int32 NoticeCount() const;
+	int32 EssayCount() const;
+	bool HasAllItems() const;
 
 	void ShowNote(const TCHAR* InTitle, const TCHAR* InBody);
 	void ShowStatus(const FString& Line, float Seconds);
@@ -137,4 +148,39 @@ private:
 	bool bClosetOpen = false;
 	bool bGhostsSpawned = false;
 	bool bPressureWarned = false;
+	bool bDutyA = false;
+	bool bDutyB = false;
+	bool bDutyC = false;
+	bool bCoin = false;
+	bool bCoinSpent = false;
+	bool bNoteSeat = false;
+	bool bNoteHall = false;
+	bool bNoteShop = false;
+	bool bNoteLocker = false;
+	bool bShopOpen = false;
+	bool bLedgerHeld = false;
+	bool bLedgerPosted = false;
+	bool bGradeOpen = false;
+	bool bMinSun = false;
+	bool bMinLiang = false;
+	bool bMinParent = false;
+	bool bNoticeA = false;
+	bool bNoticeB = false;
+	bool bNoticeC = false;
+	bool bNoticeD = false;
+	bool bHasPencil = false;
+	bool bHasBus = false;
+	bool bHasTime = false;
+	bool bItemsReturned = false;
+	bool bZhouIntro = false;
+	bool bComputerOpen = false;
+	bool bEssayDorm = false;
+	bool bEssayShop = false;
+	bool bEssayGrade = false;
+	bool bEssaysKept = false;
+	bool bShopGhost = false;
+	bool bNoticeGhost = false;
+	bool bComputerGhost = false;
+	bool bShopSodaTaken = false;
+	bool bSpareTaken = false;
 };
