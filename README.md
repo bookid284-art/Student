@@ -1,47 +1,37 @@
-# Student
+# 回课
 
-## Overview
-This repository is a UE5 C++ prototype project focused on first-person gameplay, Enhanced Input, and reusable interaction systems. It is designed to support a player controller, interactable objects, and a camera-based interaction component that can be reused in both Blueprint and C++ workflows.
+临江师范学院中文系学生陈望舒，在除夕夜里走进即将拆除的旧教学楼。楼里曾经有一所一九六七年的望江夜校。名册被要求销毁，十九岁的林秋禾没有把母亲的名字教完。
 
-## Features
-- AStudentPlayerCharacter / AStudentCharacter: configurable first-person character with movement, camera, sprint, and crouch behavior.
-- Enhanced Input integration: movement and camera actions are bound through mapping contexts and input actions.
-- Interaction system:
-  - UStudentInteractableInterface with a BlueprintNativeEvent named Interact
-  - UStudentInteractionComponent performing a camera-forward line trace to detect interactable actors
-- Blueprints can configure InteractAction, InteractionDistance, debug visualization, and other properties.
+这不是打怪游戏。你读作文、钥匙、批注、黑板和名册，再决定这些名字最后落到哪里。六种结局都会留下一个甩不掉的问题：记录别人，会不会又把她写成别的东西。
 
-## Requirements
-- Unreal Engine 5
-- C++ development tools for your platform
-  - Windows: Visual Studio 2022 with C++ workload
-  - macOS: Xcode if developing on macOS
-- Enhanced Input module support in the project
+## 怎么玩
 
-## Quick Start
-1. Clone the repository:
-   git clone https://github.com/bookid284-art/Student.git
-2. Open the .uproject file in Unreal Editor.
-3. Generate project files if needed.
-4. Compile the project in Visual Studio or through the Unreal Editor.
-5. Open a level and run the project to test the player character and interaction behavior.
+用已经装好的 Unreal Engine 5.7 打开 `Student.uproject`，直接 Play。工程会在示例关卡上方搭出整座夜校，不需要再摆关卡，也不要另外下载资源。
 
-## Example Usage
-- Add the Student player character to your level or set it as the default pawn in the Game Mode.
-- Configure an Input Mapping Context with MoveAction, LookAction, RunAction, and CrouchAction.
-- Use InteractionComponent to adjust InteractionDistance and debug visualizations.
-- Implement the Interact function on any actor that should be interactive.
+- WASD 移动，鼠标环顾
+- Shift 跑，Ctrl 蹲
+- E 交互，F 手电，Q 合上正在读的纸
+- 结局画面按 R 再走一遍这个除夕
 
-## Project Structure
-- Source/Student/: C++ source files for the gameplay systems and module definition
-- Content/: engine assets, blueprints, and input assets
+手电能逼退“错字”，蹲下能让它看丢。被碰到会忘掉一个名字，名字可以回去重读写回来。心神空了，会进入「无名」。
 
-## Notes
-- This project includes the core gameplay systems but does not currently include automated tests.
-- Different UE5 versions may require regenerating project files and validating build dependencies.
+## 结局
 
-## Contributing
-Issues and pull requests are welcome. Please include a short description of the change and testing notes in your PR.
+| 做法 | 条件 | 问的是 |
+| --- | --- | --- |
+| 出版 | 名册、三个学员、自己的名字都在 | 纪念会不会把人再写成鬼 |
+| 焚册 | 名册和红烛 | 沉默保护了谁 |
+| 留下 | 上述名字，并把红领巾放回第一排 | 课要是必须有人留下，留下的人还算不算自己 |
+| 回信 | 名册、未完稿、读过批注 | 鬼会不会在活人补课之后自己离开 |
+| 半页 | 读过一点，然后从正门离开 | 为了好读，你肯把她的名字写错吗 |
+| 无名 | 什么都不读就离开，或害怕盖过了记忆 | 记录者自己也会被涂掉 |
 
-## License
-No license is currently specified in the repository. Add a LICENSE file if you want to publish the project under an explicit open-source license.
+## 资源和代码
+
+- 场景用引擎自带的方块、球体、圆柱搭成，贴图在运行时画出来
+- 错字用项目里已有的 Mannequin
+- 中文使用随仓库附带的 Droid Sans Fallback（Apache 2.0，见 `Content/NightSchool/Fonts/`）
+- 玩法代码在 `Source/Student/NightSchool/`
+- 原有的第一人称移动和 `UStudentInteractionComponent` 仍被这场夜戏使用
+
+进入 Play 之后，GameInstance 会自己开始这一夜。示例关卡原来的 GameMode 不用改。

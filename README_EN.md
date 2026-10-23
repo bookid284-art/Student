@@ -1,47 +1,37 @@
-# Student
+# Huike / The Recitation
 
-## Overview
-This repository is a UE5 C++ prototype project focused on first-person gameplay, Enhanced Input, and reusable interaction systems. It is designed to support a player controller, interactable objects, and a camera-based interaction component that can be reused in both Blueprint and C++ workflows.
+On New Year's Eve, Chinese-literature student Chen Wangshu enters a teaching building scheduled for demolition. In 1967 it housed the Wangjiang night school. The register was ordered burned. Nineteen-year-old Lin Qiuhe never finished teaching her mother how to sign her own name.
 
-## Features
-- AStudentPlayerCharacter / AStudentCharacter: configurable first-person character with movement, camera, sprint, and crouch behavior.
-- Enhanced Input integration: movement and camera actions are bound through mapping contexts and input actions.
-- Interaction system:
-  - UStudentInteractableInterface with a BlueprintNativeEvent named Interact
-  - UStudentInteractionComponent performing a camera-forward line trace to detect interactable actors
-- Blueprints can configure InteractAction, InteractionDistance, debug visualization, and other properties.
+This is not a combat game. You read essays, a key, a margin note, a blackboard, and the register, then decide where those names go. All six endings leave the same kind of question: when you record someone, do you also turn her into something else?
 
-## Requirements
-- Unreal Engine 5
-- C++ development tools for your platform
-  - Windows: Visual Studio 2022 with C++ workload
-  - macOS: Xcode if developing on macOS
-- Enhanced Input module support in the project
+## Play
 
-## Quick Start
-1. Clone the repository:
-   git clone https://github.com/bookid284-art/Student.git
-2. Open the .uproject file in Unreal Editor.
-3. Generate project files if needed.
-4. Compile the project in Visual Studio or through the Unreal Editor.
-5. Open a level and run the project to test the player character and interaction behavior.
+Open `Student.uproject` with the Unreal Engine 5.7 install already associated with this project, then press Play. The night school is built in code above the template level. No extra assets or tools need to be downloaded.
 
-## Example Usage
-- Add the Student player character to your level or set it as the default pawn in the Game Mode.
-- Configure an Input Mapping Context with MoveAction, LookAction, RunAction, and CrouchAction.
-- Use InteractionComponent to adjust InteractionDistance and debug visualizations.
-- Implement the Interact function on any actor that should be interactive.
+- WASD move, mouse look
+- Shift sprint, Ctrl crouch
+- E interact, F flashlight, Q close a document
+- R on an ending screen restarts the night
 
-## Project Structure
-- Source/Student/: C++ source files for the gameplay systems and module definition
-- Content/: engine assets, blueprints, and input assets
+The flashlight pushes the miswritten figures back. Crouching makes them lose you. A touch erases one remembered name; rereading writes it back. If composure empties, the ending is Nameless.
 
-## Notes
-- This project includes the core gameplay systems but does not currently include automated tests.
-- Different UE5 versions may require regenerating project files and validating build dependencies.
+## Endings
 
-## Contributing
-Issues and pull requests are welcome. Please include a short description of the change and testing notes in your PR.
+| Choice | Requires | The question |
+| --- | --- | --- |
+| Publish | Register, three students, your own name | Does a memorial turn her into a ghost again? |
+| Burn | Register and the red candle | Who does silence protect? |
+| Stay | Those names, and the red scarf returned to the front row | If the lesson needs someone to remain, is that person still living their own life? |
+| Reply | Register, unfinished note, the professor's confession | Does the haunting leave once the living finish the class? |
+| Half a page | Read something, then leave by the front gate | Will you leave her name misspelled because it reads better? |
+| Nameless | Leave without reading anyone, or let fear erase memory | The recorder can be erased too |
 
-## License
-No license is currently specified in the repository. Add a LICENSE file if you want to publish the project under an explicit open-source license.
+## Code and art
+
+- Rooms are built from engine basic shapes. Portraits and the register cover are drawn at runtime.
+- The miswritten figures use the Mannequin already in this project.
+- Chinese text uses the bundled Droid Sans Fallback font (Apache 2.0, `Content/NightSchool/Fonts/`).
+- Gameplay code lives in `Source/Student/NightSchool/`.
+- The existing first-person movement and `UStudentInteractionComponent` are what the night uses.
+
+On Play, the game instance starts the story. The template map's game mode does not need to be reassigned.
