@@ -1,57 +1,103 @@
-# 里屋
+# The Recitation
 
-许知夏是住宿的高三理科生。单亲的母亲许桂芳每天打电话追问成绩，成绩不好时电话那头不再像问句，手机可以被锁，宿舍里装着摄像头。同学嘲笑面貌和精神状态，嘲笑分数，威逼请客，孤立，不愿意同桌。班主任梁老师觉得他聪明，却恨铁不成钢。
+A first-person narrative horror experience built in Unreal Engine 5.
 
-压力大到一个程度，恶意在另一间屋里变成能走过来的东西。整场没有战斗。耳塞、镜头布、汽水和那点没灭的光只能用来周旋、躲开、把人引开。校医室退休的周先生把两扇门说完。一扇要用手拨开，带着那点光离开。一扇从柜子里面带上，人就留在这间屋里。
+On New Year's Eve, Chen Wangshu—a Chinese literature student at a provincial teacher's college—returns to an old teaching building scheduled for demolition. Inside, the past refuses to stay buried. The building once housed the Wangjiang night school, a chapter of history that was meant to be burned away, but its names, notes, objects, and silences still echo through the halls.
 
-游玩始终是仓库里原来的第一人称。第一次走进每间房间，镜头会按代码把整间屋扫一遍，按 Tab 可以跳过。贴着墙按住 Q 向左倾，按住 E 向右倾，用来探路。
+The Recitation is a short-form horror game about reading, memory, and the moral burden of preserving other people's lives in the form of records. It is not a combat game. There are no enemies to defeat in the traditional sense. Instead, the player moves through a haunted school, interprets fragments of lost history, and decides what should be remembered, what should be forgotten, and what should never be written down again.
 
-主线分成六章。每一章结束要盖一枚章印，下一章的门才认。每间屋有一座红印台，按 G 把进度印下来。六组三环要在人走过来的时候拨完，八十秒。拨不完就退回上一座印台，不是另一种结局。按读完、来回躲开、再读完的走法，一轮大约六个小时。只冲文字会短不少。这里没有 Unreal 编辑器，这个时长没有在 Play 里计过时。
+## Story Premise
 
-## 六章
+At the center of the experience is a simple but disturbing question: when you record a life, do you rescue it—or do you trap it?
 
-1. 未接。手机、通话间三页、值班记录、镜头布。章印按在前厅，走廊才开。
-2. 空位。江晚的四张条子和三页班级日志。坐下之后，把章印盖回值班室。
-3. 请客。硬币打开小卖部，后仓三张收据，账本钉到走廊。章印盖进通话间，办公室才收卷子。
-4. 恨铁。三页改卷批注、梁老师的字条、年级组三页会议。章印盖回空位，长榜才开。
-5. 榜。北廊四张加上长榜四张。章印送回已经盖住的镜头旁边，校医室才开。
-6. 两扇门。三页旧病历，周先生分两次说完。看清光里的自己，再用手拨开关离开，或从柜子里面留下。
+As the night unfolds, the player discovers essays, names, margins, blackboards, the school register, and personal belongings that reveal the hidden story of the Wangjiang night school. Each discovered clue and each choice of what to recover or leave behind alters the ending. Memory is unreliable. Fear distorts truth. The school remembers differently from the people who once lived within it.
 
-三篇作文仍然可以放在长凳上。放了，离开的结尾多一句。不放也能把两种结局走完。
+## Key Features
 
-六组环分别在通话间、教室、小卖部、办公室、长榜和校医室。数字写在那间屋的墙上。按 G 转动甲、乙、丙，再按确认。人会在这间屋里走。八十秒拨不完，就从上一座印台再来。贴墙按住 Q 或 E，可以把头探出去看墙上的数字。
+- First-person exploration in a handcrafted night-school environment
+- Narrative-driven horror centered on reading, investigation, and memory
+- Dynamic runtime generation of the school space without a custom level setup
+- A flashlight mechanic that pushes back "miswritten" apparitions
+- Stealth-like avoidance through crouching and line-of-sight disruption
+- Multiple endings shaped by evidence, memory, and player decisions
+- Built around a custom story system designed for procedural reconstruction of the nightmare
 
-江晚的条子不是恋爱。她曾经想同桌，后来没有。硬币只打开小卖部，不是再请一轮。林小满已经毕业，送回铅笔盒、月票和课表不是把她救出来。小卖部还有第二瓶汽水，校医室有一节备用电池。电量撑的是那点用来后退的光。
+## Gameplay
 
-## 怎么玩
+Open `Student.uproject` in Unreal Engine 5.7 and press Play.
 
-用已经装好的 Unreal Engine 5.7 打开 `Student.uproject`，直接 Play。里屋搭在示例关卡上方，不需要再摆关卡，也不要另外下载资源。
+The night school is generated above the template level at runtime, so no extra assets, downloads, or custom map conversion are required.
 
-- WASD 移动，鼠标环顾
-- Shift 跑，Ctrl 蹲
-- Q 按住向左倾，E 按住向右倾，贴着墙探出去看
-- G 交互，F 点亮那点没灭的光，Tab 合上文字，或跳过第一次进房间的镜头
-- 结局画面按 R 再走一遍
+### Controls
 
-光能让没有脸的同学退后，蹲下能让他们看丢，汽水能引开大约十八秒。这些都不造成伤害。心神被压满也到不了结局，只会让人更想找一个没有声音的柜子。耳塞让他们更难看清你，但拨开关之前必须回床上拿下来。镜头布只能盖宿舍那一只。
+- W/A/S/D — Move
+- Mouse — Look around
+- Shift — Sprint
+- Ctrl — Crouch
+- E — Interact
+- F — Toggle flashlight
+- Q — Close a document
+- R — Restart the night from an ending screen
 
-## 结局
+### Core Mechanics
 
-| 做法 | 条件 | 留下的问题 |
+- Read documents, names, notes, and classroom artifacts to uncover the story.
+- Use the flashlight to drive back the "miswritten" figures.
+- Crouch to break line of sight and avoid being noticed.
+- Encountering a figure may cause you to forget a remembered name; rereading the relevant page can restore it.
+- Fear can erode your sense of self and push the story toward a nameless ending.
+- The experience is assembled through `UNightSchoolGameInstance`, which creates the nighttime school without replacing the base template level's `GameMode`.
+
+## Endings
+
+The project contains six possible endings, each shaped by what the player reads, remembers, and recovers.
+
+| Ending | Requirement | Core Question |
 | --- | --- | --- |
-| 离开 | 听周先生把两扇门说完，在空位上坐过，把试卷交到办公室门口，没戴耳塞，看清光里的自己，用手拨开开关 | 走出去以后，母亲、老师和那个班都还在。光没有删除他们 |
-| 锁上 | 听周先生把两扇门说完，从柜子里面把门带上 | 安静是真的。明天那张还没交的卷子也一起被留下了 |
+| Publish | Register, three students, and your own name | Does a memorial turn a person into a ghost again? |
+| Burn | Register and the red candle | Who does silence protect? |
+| Stay | The names above, plus the red scarf returned to the front row | If a lesson must leave someone behind, is that person still themselves? |
+| Reply | Register, unfinished draft, and a read note | Does the haunting leave once the living finish the class? |
+| Half a Page | Read a little, then leave through the front gate | Will you leave her name misspelled because it reads better that way? |
+| Nameless | Leave without reading anyone, or let fear erase memory | The recorder can also be erased |
 
-五枚章印、八张告示、三页旧病历和三样旧物都在第二段话之前。心神满了也不会另外出现结局。
+## Project Structure
 
-## 资源和代码
+- `Source/Student/` — core Unreal project code and gameplay systems
+- `Source/Student/NightSchool/` — custom horror narrative logic, world generation, and story systems
+- `Content/NightSchool/` — project-specific art, UI, and story assets
+- `Config/` — project configuration files
+- `Student.uproject` — entry point for the project
 
-- 房间用引擎自带的方块、球体、圆柱搭成
-- 裂开的镜子和试卷是运行时画的，不画一张可怖的脸
-- 没有脸的同学用项目里已有的 Mannequin
-- 中文使用随仓库附带的 Droid Sans Fallback（Apache 2.0，见 `Content/NightSchool/Fonts/`）
-- 光里那个穿校服的人，是 `Tools/Protagonist/generate.py` 生成的静态网格。编辑器未导入 FBX 时，同一位置用引擎方块按同样的颜色搭着。导入步骤写在 `Tools/Protagonist/README.md`
-- 玩法代码在 `Source/Student/NightSchool/`
-- 原有的第一人称移动和 `UStudentInteractionComponent` 仍被这场幻觉使用
+### Main Systems
 
-进入 Play 之后，GameInstance 会自己开始。示例关卡原来的 GameMode 不用改。
+The gameplay logic is primarily organized under `Source/Student/NightSchool/` and includes:
+
+- `UNightSchoolGameInstance` — builds the experience when the level loads
+- `ANightSchoolDirector` — world management, narrative progression, endings, objects, and fear state
+- `ANightSchoolCharacter` — character logic for the playable night-school experience
+- `ANightSchoolProp` — interactive story objects and environmental props
+- `ANightSchoolApparition` — ghostlike figures that stalk the hallways
+- `ANightSchoolStory` and related types — story data, state management, and ending conditions
+
+The base first-person movement and interaction frameworks remain in the broader Unreal project, while the custom night-school narrative layer is layered on top.
+
+## Technical Notes
+
+- The environment is built from engine primitives such as cubes, spheres, and cylinders.
+- Many props and visual elements are generated at runtime rather than imported as complete static scenes.
+- The "miswritten" figures use the existing project Mannequin skeleton and animation assets.
+- Chinese text uses the bundled `Droid Sans Fallback` font under `Content/NightSchool/Fonts/` (Apache 2.0).
+- The experience starts automatically when the level loads; there is no need to reassign the template `GameMode`.
+
+## Development Philosophy
+
+The Recitation is a compact Unreal Engine horror prototype designed to explore how a game can deliver dread through interpretation rather than combat. It blends environmental storytelling, memory-based progression, and morally charged endings into a short playable experience that emphasizes atmosphere, context, and the act of recording a life.
+
+## License and Attribution
+
+The project includes font resources under the Apache 2.0 license, and the game uses standard Unreal Engine assets and generated content. Please check the repository files themselves for additional licensing and attribution details where applicable.
+
+## Status
+
+Prototype / Narrative Horror Experiment
