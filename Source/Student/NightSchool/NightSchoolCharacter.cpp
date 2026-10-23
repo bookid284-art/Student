@@ -148,7 +148,7 @@ void ANightSchoolCharacter::Tick(float DeltaSeconds)
 
 	if (bFlashlightOn)
 	{
-		Battery = FMath::Max(0.f, Battery - DeltaSeconds * 1.15f);
+		Battery = FMath::Max(0.f, Battery - DeltaSeconds * 0.4f);
 		if (Battery <= 0.f)
 		{
 			bFlashlightOn = false;

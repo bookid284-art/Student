@@ -21,6 +21,7 @@ public:
 	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
 
 	void Configure(const FBox& InRoom, const TArray<FVector>& InWaypoints, const FString& InWrongGlyph);
+	bool ContainsXY(const FVector& Point) const { return Room.IsInsideXY(Point); }
 
 private:
 	bool CanSeePlayer(class ANightSchoolCharacter* Player) const;

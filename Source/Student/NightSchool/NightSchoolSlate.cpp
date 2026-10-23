@@ -49,6 +49,7 @@ public:
 					.Font(SmallFont)
 					.ColorAndOpacity(Dim)
 					.AutoWrapText(true)
+					.WrapTextAt(560.f)
 					.WrappingPolicy(ETextWrappingPolicy::AllowPerCharacterWrapping)
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 10.f, 0.f, 0.f)
@@ -230,11 +231,12 @@ public:
 		const float Mind = 1.f - FMath::Clamp(Director->GetFear() / 100.f, 0.f, 1.f);
 		const float Cell = Player->IsFlashlightOn() ? Player->GetBattery() / 100.f : 0.f;
 		StatsText->SetText(FText::FromString(FString::Printf(
-			TEXT("心神  %s\n那点光  %s%s\n直面  %s\n随身  %s"),
+			TEXT("心神  %s\n那点光  %s%s\n直面  %s\n支线  %s\n随身  %s"),
 			*Bar(Mind),
 			*Bar(Cell),
 			Player->IsFlashlightOn() ? TEXT("  亮着") : TEXT("  关着"),
 			*Director->GetFacingLine(),
+			*Director->GetThreadsLine(),
 			*Director->GetItemsLine())));
 		ObjectiveText->SetText(FText::FromString(Director->GetObjective()));
 		StatusText->SetText(FText::FromString(Director->GetStatusLine()));
