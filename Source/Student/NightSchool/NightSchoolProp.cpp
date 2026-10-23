@@ -57,6 +57,11 @@ const FText& ANightSchoolProp::GetPrompt() const
 	return Prompt;
 }
 
+void ANightSchoolProp::SetPrompt(const FText& InPrompt)
+{
+	Prompt = InPrompt;
+}
+
 void ANightSchoolProp::SetAvailable(bool bInAvailable)
 {
 	bAvailable = bInAvailable;

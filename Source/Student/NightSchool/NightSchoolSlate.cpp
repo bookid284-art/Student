@@ -41,7 +41,7 @@ public:
 					SAssignNew(TitleText, STextBlock)
 					.Font(TitleFont)
 					.ColorAndOpacity(Paper)
-					.Text(FText::FromString(TEXT("回课")))
+					.Text(FText::FromString(TEXT("里屋")))
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 8.f, 0.f, 0.f)
 				[
@@ -138,7 +138,7 @@ public:
 							SNew(STextBlock)
 							.Font(SmallFont)
 							.ColorAndOpacity(Dim)
-							.Text(FText::FromString(TEXT("按 Q 把纸放回去")))
+							.Text(FText::FromString(TEXT("按 Q 合上")))
 						]
 					]
 				]
@@ -181,7 +181,7 @@ public:
 						.Font(SmallFont)
 						.ColorAndOpacity(Dim)
 						.Justification(ETextJustify::Center)
-						.Text(FText::FromString(TEXT("按 R 再活一次这个除夕")))
+						.Text(FText::FromString(TEXT("按 R 再走一遍这条走廊")))
 					]
 				]
 			]
@@ -230,11 +230,11 @@ public:
 		const float Mind = 1.f - FMath::Clamp(Director->GetFear() / 100.f, 0.f, 1.f);
 		const float Cell = Player->IsFlashlightOn() ? Player->GetBattery() / 100.f : 0.f;
 		StatsText->SetText(FText::FromString(FString::Printf(
-			TEXT("心神  %s\n手电  %s%s\n记得  %s\n随身  %s"),
+			TEXT("心神  %s\n那点光  %s%s\n直面  %s\n随身  %s"),
 			*Bar(Mind),
 			*Bar(Cell),
 			Player->IsFlashlightOn() ? TEXT("  亮着") : TEXT("  关着"),
-			*Director->GetNamesLine(),
+			*Director->GetFacingLine(),
 			*Director->GetItemsLine())));
 		ObjectiveText->SetText(FText::FromString(Director->GetObjective()));
 		StatusText->SetText(FText::FromString(Director->GetStatusLine()));

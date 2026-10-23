@@ -148,7 +148,7 @@ void ANightSchoolCharacter::Tick(float DeltaSeconds)
 
 	if (bFlashlightOn)
 	{
-		Battery = FMath::Max(0.f, Battery - DeltaSeconds * 2.4f);
+		Battery = FMath::Max(0.f, Battery - DeltaSeconds * 1.15f);
 		if (Battery <= 0.f)
 		{
 			bFlashlightOn = false;
@@ -324,7 +324,7 @@ void ANightSchoolCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	}
 	else
 	{
-		UE_LOG(LogStudent, Error, TEXT("回课：没有 Enhanced Input，移动不会生效。"));
+		UE_LOG(LogStudent, Error, TEXT("里屋：没有 Enhanced Input，移动不会生效。"));
 	}
 	AttachHud();
 }
