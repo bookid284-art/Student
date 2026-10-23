@@ -28,14 +28,18 @@ public:
 	virtual void GetActorEyesViewPoint(FVector& OutLocation, FRotator& OutRotation) const override;
 
 	bool IsReading() const { return bReading; }
+	bool IsPreviewing() const { return bPreviewing; }
 	bool IsEnded() const { return bEnded; }
 	bool IsFlashlightOn() const { return bFlashlightOn; }
 	float GetBattery() const { return Battery; }
 	float GetStamina() const { return Stamina; }
 	float GetMaxStamina() const { return MaxStamina; }
+	float GetLean() const { return LeanAlpha; }
+	void ApplyResume(const FVector& Location, const FRotator& View, float InBattery, float InStamina, bool bWasCrouched, bool bLightOn);
 	bool IsFlashlightHitting(const FVector& WorldPoint) const;
 	AActor* GetFocusedActor() const;
 	void SetReading(bool bInReading);
+	void SetPreviewing(bool bInPreview);
 	void SetEnded(bool bInEnded);
 	void RefillBattery(float Amount);
 
@@ -55,6 +59,12 @@ private:
 	void ToggleFlashlight();
 	void CloseReading();
 	void RequestRestart();
+	void TryJump();
+	void LeanLeftStarted();
+	void LeanLeftStopped();
+	void LeanRightStarted();
+	void LeanRightStopped();
+	void UpdateLean(float DeltaSeconds);
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UCameraComponent> Camera;
@@ -95,6 +105,12 @@ private:
 	UPROPERTY()
 	TObjectPtr<UInputAction> JumpAction;
 
+	UPROPERTY()
+	TObjectPtr<UInputAction> LeanLeftAction;
+
+	UPROPERTY()
+	TObjectPtr<UInputAction> LeanRightAction;
+
 	TSharedPtr<SWidget> HudWidget;
 
 	bool bInputReady = false;
@@ -103,6 +119,7 @@ private:
 	bool bSprintHeld = false;
 	bool bExhausted = false;
 	bool bReading = false;
+	bool bPreviewing = false;
 	bool bEnded = false;
 	bool bFlashlightOn = false;
 	float Battery = 100.f;
@@ -111,4 +128,7 @@ private:
 	float WalkSpeed = 270.f;
 	float SprintSpeed = 490.f;
 	float CrouchSpeed = 150.f;
+	float LeanAlpha = 0.f;
+	bool bLeanLeft = false;
+	bool bLeanRight = false;
 };

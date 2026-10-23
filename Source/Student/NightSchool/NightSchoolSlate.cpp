@@ -41,7 +41,16 @@ public:
 					SAssignNew(TitleText, STextBlock)
 					.Font(TitleFont)
 					.ColorAndOpacity(Paper)
-					.Text(FText::FromString(TEXT("回课")))
+					.Text(FText::FromString(TEXT("里屋")))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 8.f, 0.f, 0.f)
+				[
+					SAssignNew(ChapterText, STextBlock)
+					.Font(SmallFont)
+					.ColorAndOpacity(FLinearColor(0.93f, 0.72f, 0.48f))
+					.AutoWrapText(true)
+					.WrapTextAt(560.f)
+					.WrappingPolicy(ETextWrappingPolicy::AllowPerCharacterWrapping)
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 8.f, 0.f, 0.f)
 				[
@@ -49,6 +58,7 @@ public:
 					.Font(SmallFont)
 					.ColorAndOpacity(Dim)
 					.AutoWrapText(true)
+					.WrapTextAt(560.f)
 					.WrappingPolicy(ETextWrappingPolicy::AllowPerCharacterWrapping)
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 10.f, 0.f, 0.f)
@@ -98,7 +108,7 @@ public:
 					.Font(SmallFont)
 					.ColorAndOpacity(FLinearColor(0.62f, 0.58f, 0.5f))
 					.Justification(ETextJustify::Center)
-					.Text(FText::FromString(TEXT("WASD 移动    鼠标 环顾    Shift 跑    Ctrl 蹲    E 交互    F 手电    Q 合上")))
+					.Text(FText::FromString(TEXT("WASD 移动    鼠标 环顾    Q 左倾    E 右倾    G 交互    F 那点光    Tab 合上或跳过看房")))
 				]
 			]
 			+ SOverlay::Slot()
@@ -138,7 +148,7 @@ public:
 							SNew(STextBlock)
 							.Font(SmallFont)
 							.ColorAndOpacity(Dim)
-							.Text(FText::FromString(TEXT("按 Q 把纸放回去")))
+							.Text(FText::FromString(TEXT("按 Tab 合上")))
 						]
 					]
 				]
@@ -181,7 +191,7 @@ public:
 						.Font(SmallFont)
 						.ColorAndOpacity(Dim)
 						.Justification(ETextJustify::Center)
-						.Text(FText::FromString(TEXT("按 R 再活一次这个除夕")))
+						.Text(FText::FromString(TEXT("按 R 再走一遍这条走廊")))
 					]
 				]
 			]
@@ -224,19 +234,42 @@ public:
 			{
 				PromptText->SetText(FText::GetEmpty());
 			}
+			if (ChapterText.IsValid())
+			{
+				ChapterText->SetText(FText::GetEmpty());
+			}
 			return;
+		}
+
+		FString ChapterLine = Director->GetChapterLine();
+		const FString PreviewLine = Director->GetPreviewLine();
+		if (!PreviewLine.IsEmpty())
+		{
+			ChapterLine += TEXT("\n");
+			ChapterLine += PreviewLine;
+		}
+		if (ChapterText.IsValid())
+		{
+			ChapterText->SetText(FText::FromString(ChapterLine));
 		}
 
 		const float Mind = 1.f - FMath::Clamp(Director->GetFear() / 100.f, 0.f, 1.f);
 		const float Cell = Player->IsFlashlightOn() ? Player->GetBattery() / 100.f : 0.f;
 		StatsText->SetText(FText::FromString(FString::Printf(
-			TEXT("心神  %s\n手电  %s%s\n记得  %s\n随身  %s"),
+			TEXT("心神  %s\n那点光  %s%s\n直面  %s\n支线  %s\n随身  %s"),
 			*Bar(Mind),
 			*Bar(Cell),
 			Player->IsFlashlightOn() ? TEXT("  亮着") : TEXT("  关着"),
-			*Director->GetNamesLine(),
+			*Director->GetFacingLine(),
+			*Director->GetThreadsLine(),
 			*Director->GetItemsLine())));
-		ObjectiveText->SetText(FText::FromString(Director->GetObjective()));
+		FString Objective = Director->GetObjective();
+		const FString PuzzleLine = Director->GetPuzzleLine();
+		if (!PuzzleLine.IsEmpty())
+		{
+			Objective = PuzzleLine + TEXT("\n") + Objective;
+		}
+		ObjectiveText->SetText(FText::FromString(Objective));
 		StatusText->SetText(FText::FromString(Director->GetStatusLine()));
 
 		FText Prompt;
@@ -249,10 +282,23 @@ public:
 		}
 		if (PromptText.IsValid())
 		{
-			PromptText->SetText(Prompt.IsEmpty() ? FText::GetEmpty() : FText::FromString(FString::Printf(TEXT("按 E    %s"), *Prompt.ToString())));
+			PromptText->SetText(Prompt.IsEmpty() ? FText::GetEmpty() : FText::FromString(FString::Printf(TEXT("按 G    %s"), *Prompt.ToString())));
 		}
 		if (Crosshair.IsValid())
 		{
+			const float Lean = Player->GetLean();
+			if (Lean < -0.35f)
+			{
+				Crosshair->SetText(FText::FromString(TEXT("‹")));
+			}
+			else if (Lean > 0.35f)
+			{
+				Crosshair->SetText(FText::FromString(TEXT("›")));
+			}
+			else
+			{
+				Crosshair->SetText(FText::FromString(TEXT("·")));
+			}
 			Crosshair->SetColorAndOpacity(Prompt.IsEmpty() ? FLinearColor(0.7f, 0.66f, 0.58f, 0.45f) : FLinearColor(0.95f, 0.55f, 0.4f, 0.95f));
 		}
 
@@ -282,6 +328,7 @@ private:
 
 	TWeakObjectPtr<ANightSchoolCharacter> Character;
 	TSharedPtr<STextBlock> TitleText;
+	TSharedPtr<STextBlock> ChapterText;
 	TSharedPtr<STextBlock> StatsText;
 	TSharedPtr<STextBlock> ObjectiveText;
 	TSharedPtr<STextBlock> StatusText;

@@ -163,7 +163,7 @@ namespace NightSchoolArt
 		TArray<uint8> Bytes;
 		if (!FFileHelper::LoadFileToArray(Bytes, *SourcePath))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("回课：找不到中文字体 %s"), *SourcePath);
+			UE_LOG(LogTemp, Warning, TEXT("里屋：找不到中文字体 %s"), *SourcePath);
 			return nullptr;
 		}
 		FFileHelper::SaveArrayToFile(Bytes, *DestPath);
@@ -233,7 +233,18 @@ namespace NightSchoolArt
 		return Texture;
 	}
 
-	UTexture2D* MakePortrait(UObject* Outer)
+	void FillRect(TArray<FColor>& Pixels, int32 Width, int32 Height, int32 X0, int32 Y0, int32 X1, int32 Y1, const FColor& Color)
+	{
+		for (int32 Y = Y0; Y <= Y1; ++Y)
+		{
+			for (int32 X = X0; X <= X1; ++X)
+			{
+				Put(Pixels, Width, Height, X, Y, Color);
+			}
+		}
+	}
+
+	UTexture2D* MakeMirror(UObject* Outer)
 	{
 		constexpr int32 W = 256;
 		constexpr int32 H = 336;
@@ -244,87 +255,45 @@ namespace NightSchoolArt
 		{
 			for (int32 X = 0; X < W; ++X)
 			{
-				const float N = Noise(X * 0.08f, Y * 0.08f);
-				const float Fiber = Noise(X * 0.4f, Y * 0.05f);
-				const uint8 R = static_cast<uint8>(FMath::Clamp(168.f + N * 28.f + Fiber * 10.f, 0.f, 255.f));
-				const uint8 G = static_cast<uint8>(FMath::Clamp(150.f + N * 22.f, 0.f, 255.f));
-				const uint8 B = static_cast<uint8>(FMath::Clamp(118.f + N * 16.f, 0.f, 255.f));
-				Pixels[Y * W + X] = FColor(R, G, B, 255);
+				const float N = Noise(X * 0.07f, Y * 0.05f);
+				const float Vignette = FMath::Clamp(1.f - FVector2D(X - 128.f, Y - 168.f).Size() / 210.f, 0.f, 1.f);
+				const uint8 Channel = static_cast<uint8>(FMath::Clamp(16.f + N * 18.f + Vignette * 22.f, 0.f, 255.f));
+				Pixels[Y * W + X] = FColor(Channel, Channel + 4, Channel + 12, 255);
 			}
 		}
 
-		for (int32 X = 12; X < W - 12; ++X)
+		FillRect(Pixels, W, H, 0, 0, W - 1, 14, FColor(28, 26, 24, 255));
+		FillRect(Pixels, W, H, 0, H - 15, W - 1, H - 1, FColor(28, 26, 24, 255));
+		FillRect(Pixels, W, H, 0, 0, 14, H - 1, FColor(28, 26, 24, 255));
+		FillRect(Pixels, W, H, W - 15, 0, W - 1, H - 1, FColor(28, 26, 24, 255));
+
+		FillEllipse(Pixels, W, H, 128.f, 188.f, 36.f, 90.f, FColor(58, 66, 74, 255), true);
+
+		for (int32 Step = 0; Step < 240; ++Step)
 		{
-			for (int32 T = 0; T < 4; ++T)
+			const int32 X = 36 + Step;
+			const int32 Y = 28 + (Step * 270) / 240 + ((Step / 11) % 3);
+			const FColor Crack(186, 196, 204, 255);
+			Put(Pixels, W, H, X, Y, Crack);
+			Put(Pixels, W, H, X, Y + 1, FColor(120, 132, 142, 255));
+			if (Step > 90 && Step < 150)
 			{
-				Put(Pixels, W, H, X, 12 + T, FColor(92, 28, 24, 255));
-				Put(Pixels, W, H, X, H - 16 + T, FColor(92, 28, 24, 255));
+				Put(Pixels, W, H, X - (Step - 90) / 2, Y + 8, Crack);
 			}
 		}
-		for (int32 Y = 12; Y < H - 12; ++Y)
+		for (int32 Step = 0; Step < 120; ++Step)
 		{
-			for (int32 T = 0; T < 4; ++T)
-			{
-				Put(Pixels, W, H, 12 + T, Y, FColor(92, 28, 24, 255));
-				Put(Pixels, W, H, W - 16 + T, Y, FColor(92, 28, 24, 255));
-			}
+			const int32 X = 180 - Step / 2;
+			const int32 Y = 70 + Step;
+			Put(Pixels, W, H, X, Y, FColor(150, 162, 170, 255));
 		}
 
-		FillEllipse(Pixels, W, H, 128.f, 118.f, 78.f, 58.f, FColor(18, 16, 18, 255), false);
-		FillEllipse(Pixels, W, H, 78.f, 150.f, 28.f, 70.f, FColor(22, 18, 20, 255), true);
-		FillEllipse(Pixels, W, H, 178.f, 150.f, 28.f, 70.f, FColor(22, 18, 20, 255), true);
-		FillEllipse(Pixels, W, H, 128.f, 168.f, 52.f, 64.f, FColor(186, 156, 132, 255), false);
-		FillEllipse(Pixels, W, H, 128.f, 196.f, 28.f, 18.f, FColor(168, 132, 112, 255), true);
-
-		for (int32 X = 96; X < 118; ++X)
-		{
-			Put(Pixels, W, H, X, 158 + ((X / 3) % 2), FColor(42, 28, 26, 255));
-		}
-		for (int32 X = 140; X < 162; ++X)
-		{
-			Put(Pixels, W, H, X, 158 + ((X / 3) % 2), FColor(42, 28, 26, 255));
-		}
-		FillEllipse(Pixels, W, H, 108.f, 172.f, 8.f, 4.f, FColor(36, 24, 22, 255), false);
-		FillEllipse(Pixels, W, H, 150.f, 172.f, 8.f, 4.f, FColor(36, 24, 22, 255), false);
-		FillEllipse(Pixels, W, H, 110.f, 171.f, 2.f, 2.f, FColor(230, 220, 210, 255), false);
-		FillEllipse(Pixels, W, H, 152.f, 171.f, 2.f, 2.f, FColor(230, 220, 210, 255), false);
-
-		for (int32 Y = 176; Y < 196; ++Y)
-		{
-			Put(Pixels, W, H, 128, Y, FColor(120, 82, 70, 255));
-		}
-		for (int32 X = 118; X < 140; ++X)
-		{
-			Put(Pixels, W, H, X, 214, FColor(92, 48, 46, 255));
-		}
-
-		FillEllipse(Pixels, W, H, 128.f, 268.f, 70.f, 48.f, FColor(36, 34, 40, 255), false);
-		for (int32 Y = 230; Y < 250; ++Y)
-		{
-			for (int32 X = 112; X < 146; ++X)
-			{
-				Put(Pixels, W, H, X, Y, FColor(214, 206, 190, 255));
-			}
-		}
-
-		FillEllipse(Pixels, W, H, 196.f, 286.f, 22.f, 22.f, FColor(148, 28, 24, 255), false);
-		FillEllipse(Pixels, W, H, 196.f, 286.f, 10.f, 10.f, FColor(176, 154, 120, 255), false);
-
-		for (int32 I = 0; I < 40; ++I)
-		{
-			const int32 X = 28 + (I * 17) % 12;
-			const int32 Y = 70 + I * 5;
-			if (Y < H - 30)
-			{
-				Put(Pixels, W, H, X, Y, FColor(48, 36, 32, 255));
-				Put(Pixels, W, H, X + 1, Y, FColor(48, 36, 32, 255));
-			}
-		}
-
+		FillEllipse(Pixels, W, H, 214.f, 42.f, 11.f, 11.f, FColor(120, 16, 14, 255), false);
+		FillEllipse(Pixels, W, H, 214.f, 42.f, 4.f, 4.f, FColor(255, 70, 54, 255), false);
 		return CreateTexture(Outer, W, H, Pixels);
 	}
 
-	UTexture2D* MakeRegisterCover(UObject* Outer)
+	UTexture2D* MakeScoreSheet(UObject* Outer)
 	{
 		constexpr int32 W = 256;
 		constexpr int32 H = 320;
@@ -334,32 +303,31 @@ namespace NightSchoolArt
 		{
 			for (int32 X = 0; X < W; ++X)
 			{
-				const float N = Noise(X * 0.06f, Y * 0.06f);
-				const bool bStripe = X > 28 && X < 52;
-				FColor Cloth = bStripe ? FColor(120, 24, 22, 255) : FColor(28, 36, 48, 255);
-				Cloth.R = static_cast<uint8>(FMath::Clamp(Cloth.R + N * 18.f, 0.f, 255.f));
-				Cloth.G = static_cast<uint8>(FMath::Clamp(Cloth.G + N * 12.f, 0.f, 255.f));
-				Cloth.B = static_cast<uint8>(FMath::Clamp(Cloth.B + N * 10.f, 0.f, 255.f));
-				const float Burn = (X + Y * 0.35f) / static_cast<float>(W);
-				if (Burn > 1.15f && Noise(X * 0.1f, Y * 0.1f) > 0.25f)
-				{
-					Cloth = FColor(12, 10, 10, 255);
-				}
-				Pixels[Y * W + X] = Cloth;
-			}
-		}
-		for (int32 Y = 78; Y < 250; ++Y)
-		{
-			for (int32 X = 78; X < 210; ++X)
-			{
-				const float N = Noise(X * 0.2f, Y * 0.2f);
+				const float N = Noise(X * 0.08f, Y * 0.04f);
 				Pixels[Y * W + X] = FColor(
-					static_cast<uint8>(150 + N * 20.f),
-					static_cast<uint8>(132 + N * 16.f),
-					static_cast<uint8>(96 + N * 10.f),
+					static_cast<uint8>(226 + N * 16.f),
+					static_cast<uint8>(222 + N * 12.f),
+					static_cast<uint8>(206 + N * 10.f),
 					255);
 			}
 		}
+
+		FillRect(Pixels, W, H, 0, 0, W - 1, 48, FColor(36, 58, 92, 255));
+		for (int32 Row = 0; Row < 7; ++Row)
+		{
+			const int32 Y = 72 + Row * 28;
+			FillRect(Pixels, W, H, 18, Y, W - 19, Y + 1, FColor(170, 176, 184, 255));
+			FillRect(Pixels, W, H, 28, Y + 8, 120, Y + 14, FColor(196, 198, 202, 255));
+		}
+		FillRect(Pixels, W, H, 148, 78, 149, 250, FColor(186, 190, 196, 255));
+
+		const FColor Ink(176, 28, 32, 255);
+		FillRect(Pixels, W, H, 168, 214, 206, 222, Ink);
+		FillRect(Pixels, W, H, 168, 214, 176, 246, Ink);
+		FillRect(Pixels, W, H, 168, 246, 206, 254, Ink);
+		FillRect(Pixels, W, H, 198, 254, 206, 286, Ink);
+		FillRect(Pixels, W, H, 168, 278, 206, 286, Ink);
+		FillRect(Pixels, W, H, 222, 214, 232, 286, Ink);
 		return CreateTexture(Outer, W, H, Pixels);
 	}
 }

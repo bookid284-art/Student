@@ -57,6 +57,11 @@ const FText& ANightSchoolProp::GetPrompt() const
 	return Prompt;
 }
 
+void ANightSchoolProp::SetPrompt(const FText& InPrompt)
+{
+	Prompt = InPrompt;
+}
+
 void ANightSchoolProp::SetAvailable(bool bInAvailable)
 {
 	bAvailable = bInAvailable;
@@ -72,6 +77,36 @@ void ANightSchoolProp::OpenDoor()
 	}
 	bDoorOpen = true;
 	SetActorEnableCollision(false);
+}
+
+void ANightSchoolProp::CloseDoor()
+{
+	if (!bDoor || !bDoorOpen)
+	{
+		return;
+	}
+	bDoorOpen = false;
+	bSlideDone = false;
+	SetActorLocation(ClosedLocation);
+	SetActorEnableCollision(true);
+	SetActorTickEnabled(true);
+}
+
+void ANightSchoolProp::Revive()
+{
+	if (!bConsumed)
+	{
+		return;
+	}
+	bConsumed = false;
+	bAvailable = true;
+	SetActorHiddenInGame(false);
+	SetActorEnableCollision(true);
+}
+
+void ANightSchoolProp::SetMarker(FName InMarker)
+{
+	Marker = InMarker;
 }
 
 void ANightSchoolProp::Consume()
