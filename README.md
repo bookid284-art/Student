@@ -1,81 +1,103 @@
 # The Recitation
 
-On New Year's Eve, Chen Wangshu, a Chinese literature student at a provincial teacher's college, enters an old teaching building scheduled for demolition. The building once housed the Wangjiang night school, a place that is remembered in fragments, rumors, and erased names. What remains is not a battlefield, but a memory space—one where the past keeps repeating itself through paper, objects, and unfinished lessons.
+A first-person narrative horror experience built in Unreal Engine 5.
 
-This is not a combat game. It is a first-person narrative horror experience focused on reading, memory, and the ethics of recording other people's lives. The story unfolds through environmental storytelling, document fragments, object interactions, and a slowly collapsing sense of certainty. The player does not shoot their way through the nightmare—they survive by deciphering what was omitted, remembering what was lost, and deciding what should be preserved.
+On New Year's Eve, Chen Wangshu—a Chinese literature student at a provincial teacher's college—returns to an old teaching building scheduled for demolition. Inside, the past refuses to stay buried. The building once housed the Wangjiang night school, a chapter of history that was meant to be burned away, but its names, notes, objects, and silences still echo through the halls.
 
-The experience is built in Unreal Engine 5 and centered on a handcrafted night-school space generated at runtime. The player explores a school suspended in a repeating night, where each discovered document, recovered object, or remembered name can change the ending.
+The Recitation is a short-form horror game about reading, memory, and the moral burden of preserving other people's lives in the form of records. It is not a combat game. There are no enemies to defeat in the traditional sense. Instead, the player moves through a haunted school, interprets fragments of lost history, and decides what should be remembered, what should be forgotten, and what should never be written down again.
+
+## Story Premise
+
+At the center of the experience is a simple but disturbing question: when you record a life, do you rescue it—or do you trap it?
+
+As the night unfolds, the player discovers essays, names, margins, blackboards, the school register, and personal belongings that reveal the hidden story of the Wangjiang night school. Each discovered clue and each choice of what to recover or leave behind alters the ending. Memory is unreliable. Fear distorts truth. The school remembers differently from the people who once lived within it.
+
+## Key Features
+
+- First-person exploration in a handcrafted night-school environment
+- Narrative-driven horror centered on reading, investigation, and memory
+- Dynamic runtime generation of the school space without a custom level setup
+- A flashlight mechanic that pushes back "miswritten" apparitions
+- Stealth-like avoidance through crouching and line-of-sight disruption
+- Multiple endings shaped by evidence, memory, and player decisions
+- Built around a custom story system designed for procedural reconstruction of the nightmare
 
 ## Gameplay
 
-Open `Student.uproject` with Unreal Engine 5.7 and press Play. The night school is constructed above the template level at runtime, so no additional setup, asset downloads, or custom level conversion are required.
+Open `Student.uproject` in Unreal Engine 5.7 and press Play.
+
+The night school is generated above the template level at runtime, so no extra assets, downloads, or custom map conversion are required.
 
 ### Controls
 
-- W/A/S/D: move
-- Mouse: look around
-- Shift: sprint
-- Ctrl: crouch
-- E: interact
-- F: flashlight
-- Q: close a document
-- R: restart the night from an ending screen
+- W/A/S/D — Move
+- Mouse — Look around
+- Shift — Sprint
+- Ctrl — Crouch
+- E — Interact
+- F — Toggle flashlight
+- Q — Close a document
+- R — Restart the night from an ending screen
 
-### Core mechanics
+### Core Mechanics
 
 - Read documents, names, notes, and classroom artifacts to uncover the story.
-- Use the flashlight to push back the "miswritten" apparitions.
-- Crouch to break line of sight and avoid detection.
-- Encountering one of the figures causes you to forget a remembered name; reading the relevant page again can restore it.
-- When fear overwhelms you, the story can collapse into a nameless ending.
-- The game's setting is built dynamically by `UNightSchoolGameInstance`, which spawns the night school without replacing the template level's `GameMode`.
+- Use the flashlight to drive back the "miswritten" figures.
+- Crouch to break line of sight and avoid being noticed.
+- Encountering a figure may cause you to forget a remembered name; rereading the relevant page can restore it.
+- Fear can erode your sense of self and push the story toward a nameless ending.
+- The experience is assembled through `UNightSchoolGameInstance`, which creates the nighttime school without replacing the base template level's `GameMode`.
 
 ## Endings
 
-There are six possible endings, each driven by what the player reads, what they remember, and which objects they recover or return.
+The project contains six possible endings, each shaped by what the player reads, remembers, and recovers.
 
-| Ending | Requirements | Core question |
+| Ending | Requirement | Core Question |
 | --- | --- | --- |
-| Publish | The register, three students, and your own name are all present | Does a memorial turn a person into a ghost again? |
-| Burn | The register and the red candle | Who does silence protect? |
+| Publish | Register, three students, and your own name | Does a memorial turn a person into a ghost again? |
+| Burn | Register and the red candle | Who does silence protect? |
 | Stay | The names above, plus the red scarf returned to the front row | If a lesson must leave someone behind, is that person still themselves? |
-| Reply | The register, unfinished draft, and a read note | Does the haunting leave once the living finish the class? |
+| Reply | Register, unfinished draft, and a read note | Does the haunting leave once the living finish the class? |
 | Half a Page | Read a little, then leave through the front gate | Will you leave her name misspelled because it reads better that way? |
 | Nameless | Leave without reading anyone, or let fear erase memory | The recorder can also be erased |
 
-## Project structure
+## Project Structure
 
-- `Source/Student/`: core Unreal project code and gameplay systems
-- `Source/Student/NightSchool/`: custom horror narrative systems and runtime world logic
-- `Content/NightSchool/`: project-specific art, UI, and story assets
-- `Config/`: project configuration files
-- `Student.uproject`: project entry point
+- `Source/Student/` — core Unreal project code and gameplay systems
+- `Source/Student/NightSchool/` — custom horror narrative logic, world generation, and story systems
+- `Content/NightSchool/` — project-specific art, UI, and story assets
+- `Config/` — project configuration files
+- `Student.uproject` — entry point for the project
 
-### Main gameplay systems
+### Main Systems
 
-The custom game logic is organized under `Source/Student/NightSchool/` and includes systems such as:
+The gameplay logic is primarily organized under `Source/Student/NightSchool/` and includes:
 
-- `UNightSchoolGameInstance`: builds the experience when the level loads
-- `ANightSchoolDirector`: manages the world, story progression, endings, interactable objects, and fear state
-- `ANightSchoolCharacter`: custom avatar logic for the playable night-school experience
-- `ANightSchoolProp`: interactivity for story items and environment props
-- `ANightSchoolApparition`: ghost-like figures that stalk the school
-- `ANightSchoolStory` and related types: story state, narrative logic, and ending conditions
+- `UNightSchoolGameInstance` — builds the experience when the level loads
+- `ANightSchoolDirector` — world management, narrative progression, endings, objects, and fear state
+- `ANightSchoolCharacter` — character logic for the playable night-school experience
+- `ANightSchoolProp` — interactive story objects and environmental props
+- `ANightSchoolApparition` — ghostlike figures that stalk the hallways
+- `ANightSchoolStory` and related types — story data, state management, and ending conditions
 
-The base first-person movement and general interaction systems remain in the broader Unreal project, while the night-school narrative layer is built on top of them.
+The base first-person movement and interaction frameworks remain in the broader Unreal project, while the custom night-school narrative layer is layered on top.
 
-## Technical details
+## Technical Notes
 
 - The environment is built from engine primitives such as cubes, spheres, and cylinders.
-- Many props and visual elements are generated at runtime rather than imported as full static scenes.
+- Many props and visual elements are generated at runtime rather than imported as complete static scenes.
 - The "miswritten" figures use the existing project Mannequin skeleton and animation assets.
-- Chinese text uses the bundled `Droid Sans Fallback` font (Apache 2.0), located under `Content/NightSchool/Fonts/`.
-- The game instance starts the story automatically when the level loads; no custom `GameMode` reassignment is required.
+- Chinese text uses the bundled `Droid Sans Fallback` font under `Content/NightSchool/Fonts/` (Apache 2.0).
+- The experience starts automatically when the level loads; there is no need to reassign the template `GameMode`.
 
-## Notes
+## Development Philosophy
 
-This project is a compact Unreal Engine horror game prototype that blends exploration, environmental storytelling, and choice-driven endings. It is designed as a playable narrative experiment rather than a large commercial production, but it contains a complete loop, multiple endings, and a custom systems framework for building haunted-space interactions.
+The Recitation is a compact Unreal Engine horror prototype designed to explore how a game can deliver dread through interpretation rather than combat. It blends environmental storytelling, memory-based progression, and morally charged endings into a short playable experience that emphasizes atmosphere, context, and the act of recording a life.
 
-## License and attribution
+## License and Attribution
 
-The project includes font resources under the Apache 2.0 license, and the game uses standard Unreal Engine assets and generated project content. Please check the repository files themselves for license and attribution details where applicable.
+The project includes font resources under the Apache 2.0 license, and the game uses standard Unreal Engine assets and generated content. Please check the repository files themselves for additional licensing and attribution details where applicable.
+
+## Status
+
+Prototype / Narrative Horror Experiment
