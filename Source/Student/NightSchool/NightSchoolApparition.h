@@ -7,7 +7,7 @@
 class USkeletalMesh;
 class UAnimationAsset;
 
-/** 错字。不是战斗单位，碰到人就涂掉一个名字。 */
+/** 没有脸的同学。不是战斗单位，碰到人只把压力贴上来，再退开。 */
 UCLASS()
 class STUDENT_API ANightSchoolApparition : public ACharacter
 {
@@ -21,6 +21,7 @@ public:
 	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
 
 	void Configure(const FBox& InRoom, const TArray<FVector>& InWaypoints, const FString& InWrongGlyph);
+	bool ContainsXY(const FVector& Point) const { return Room.IsInsideXY(Point); }
 
 private:
 	bool CanSeePlayer(class ANightSchoolCharacter* Player) const;

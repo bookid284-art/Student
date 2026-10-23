@@ -1,37 +1,56 @@
-# Huike / The Recitation
+# The Inner Room
 
-On New Year's Eve, Chinese-literature student Chen Wangshu enters a teaching building scheduled for demolition. In 1967 it housed the Wangjiang night school. The register was ordered burned. Nineteen-year-old Lin Qiuhe never finished teaching her mother how to sign her own name.
+Xu Zhixia is a boarding science student in the last year of high school. Xu Guifang, a single mother, calls every night for the scores, locks the phone, and has a camera in the dorm room. Classmates mock appearance, state of mind, and grades, demand to be treated, and refuse to share a desk. Teacher Liang thinks he is bright and cannot forgive the scores.
 
-This is not a combat game. You read essays, a key, a margin note, a blackboard, and the register, then decide where those names go. All six endings leave the same kind of question: when you record someone, do you also turn her into something else?
+Under that pressure he hallucinates a second set of rooms, where the malice has a body. There is no combat. Earplugs, a lens cloth, a bottle of soda, and a light that has not gone out are only for stalling and slipping past. Mr. Zhou, retired from the infirmary, explains the two doors. One is opened by hand, and an inner light leads out of the rooms. The other is shut from inside a closet, and he stays.
+
+Play stays in the first-person view already in this project. The first time a room is entered, code sweeps a camera around it. Tab skips that look. Hold Q to lean left and E to lean right, and look around a corner without stepping out.
+
+The clear is six chapters. Each one ends by stamping a seal before the next door accepts you. Every room has a red ink pad. Press G there to mark your place. Six sets of three rings have to be turned while someone is walking toward you. Each set lasts eighty seconds. If the rings are still wrong when the time runs out, you return to the last ink pad. That return is not a third ending. Read, double back, and hide, and one clear is meant to take about six hours. Skipping the sentences makes it shorter. This environment has no Unreal Editor, so that length was not timed in Play.
+
+## Six chapters
+
+1. Missed calls. The phone, three transcripts, the duty logs, and the lens cloth. The seal goes on the antechamber board before the hall opens.
+2. The empty seat. Jiang Wan's four notes and three class pages. After sitting, stamp the seal in the duty room.
+3. Treating. The coin opens the shop, three receipts sit in the back room, and the ledger is pinned in the hall. Stamp the seal in the call room before the office takes the paper.
+4. The unforgiven score. Three margin notes, Liang's letter, and three meeting pages. Stamp the seal back on the empty seat before the long board opens.
+5. The board. Four notices, then four more. Return the seal to the covered camera before the infirmary opens.
+6. Two doors. Three old charts, then Zhou in two conversations. Look at yourself in the light, then throw the switch or shut the closet from inside.
+
+Three essays can still be left on the bench. Doing so adds a line to the leaving ending. Either ending can be reached without them.
+
+The six rings are in the call room, classroom, shop, office, long board, and infirmary. The digits are written on that room's wall. Press G to turn the three wheels, then confirm. Someone walks the room while you do it. Eighty seconds, then you are sent back to the last ink pad. Hold Q or E against a wall to lean out and read the digits.
+
+Jiang Wan's notes are not a romance. She almost sat there, then did not. The coin only opens the shop. Lin Xiaoman has already graduated; returning her pencil case, bus pass, and timetable does not rescue her. A second bottle is in the shop, and a spare cell is in the infirmary. The battery feeds the small light used to make figures step back.
 
 ## Play
 
-Open `Student.uproject` with the Unreal Engine 5.7 install already associated with this project, then press Play. The night school is built in code above the template level. No extra assets or tools need to be downloaded.
+Open `Student.uproject` with the Unreal Engine 5.7 install already associated with this project, then press Play. The rooms are built in code above the template level. No extra assets need to be downloaded.
 
 - WASD move, mouse look
 - Shift sprint, Ctrl crouch
-- E interact, F flashlight, Q close a document
-- R on an ending screen restarts the night
+- Hold Q to lean left, hold E to lean right
+- G interact, F the small light, Tab close a note or skip the first look around a room
+- R on an ending screen walks the corridor again
 
-The flashlight pushes the miswritten figures back. Crouching makes them lose you. A touch erases one remembered name; rereading writes it back. If composure empties, the ending is Nameless.
+The light makes the faceless classmates step back. Crouching makes them lose you. Soda draws them for about eighteen seconds. None of this causes harm. Full pressure does not end the game. Earplugs shorten their sight, and they have to come off before the switch. The cloth only covers the dorm camera.
 
 ## Endings
 
-| Choice | Requires | The question |
+| Choice | Requires | What remains |
 | --- | --- | --- |
-| Publish | Register, three students, your own name | Does a memorial turn her into a ghost again? |
-| Burn | Register and the red candle | Who does silence protect? |
-| Stay | Those names, and the red scarf returned to the front row | If the lesson needs someone to remain, is that person still living their own life? |
-| Reply | Register, unfinished note, the professor's confession | Does the haunting leave once the living finish the class? |
-| Half a page | Read something, then leave by the front gate | Will you leave her name misspelled because it reads better? |
-| Nameless | Leave without reading anyone, or let fear erase memory | The recorder can be erased too |
+| Leave | Zhou's second conversation, sitting at the empty desk, handing in the paper, earplugs off, looking at yourself in the light, and the switch thrown by hand | Morning is ordinary. Mother, teacher, and class are still there. The light does not delete them |
+| Shut in | Zhou's second conversation, then closing the closet from the inside | The quiet is real. So is the paper that will never be handed in |
+
+The five seals, eight notices, three old charts, and three returned objects all come before that second conversation. Full pressure still does not create another ending.
 
 ## Code and art
 
-- Rooms are built from engine basic shapes. Portraits and the register cover are drawn at runtime.
-- The miswritten figures use the Mannequin already in this project.
+- Rooms use engine basic shapes. The cracked mirror and the score sheet are drawn at runtime.
+- The faceless classmates use the Mannequin already in this project.
 - Chinese text uses the bundled Droid Sans Fallback font (Apache 2.0, `Content/NightSchool/Fonts/`).
+- The uniformed figure in the lit room is the static mesh from `Tools/Protagonist/generate.py`. Until that FBX is imported, the same spot is built from engine boxes in the same colors. Import steps are in `Tools/Protagonist/README.md`.
 - Gameplay code lives in `Source/Student/NightSchool/`.
-- The existing first-person movement and `UStudentInteractionComponent` are what the night uses.
+- The existing first-person movement and `UStudentInteractionComponent` are what the hallucination uses.
 
 On Play, the game instance starts the story. The template map's game mode does not need to be reassigned.

@@ -76,7 +76,7 @@ void UNightSchoolGameInstance::StartExperience()
 	{
 		if (++RetryCount > 40)
 		{
-			UE_LOG(LogStudent, Error, TEXT("回课：没有等到玩家控制器。"));
+			UE_LOG(LogStudent, Error, TEXT("里屋：没有等到玩家控制器。"));
 			return;
 		}
 		World->GetTimerManager().SetTimer(StartTimer, this, &UNightSchoolGameInstance::StartExperience, 0.1f, false);
@@ -117,7 +117,7 @@ void UNightSchoolGameInstance::StartExperience()
 
 	BuiltWorld = World;
 	bBuilding = false;
-	UE_LOG(LogStudent, Log, TEXT("回课：除夕开始。"));
+	UE_LOG(LogStudent, Log, TEXT("里屋：幻觉开始。"));
 }
 
 void UNightSchoolGameInstance::SuppressTemplateWorld(UWorld* World)

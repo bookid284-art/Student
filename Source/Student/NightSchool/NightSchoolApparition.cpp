@@ -115,7 +115,12 @@ ANightSchoolCharacter* ANightSchoolApparition::FindPlayer() const
 
 bool ANightSchoolApparition::CanSeePlayer(ANightSchoolCharacter* Player) const
 {
-	if (!Player || Player->IsEnded() || Player->IsReading())
+	const ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld());
+	if (!Player || Player->IsEnded() || Player->IsPreviewing())
+	{
+		return false;
+	}
+	if (Player->IsReading() && !(Director && Director->IsPuzzleActive()))
 	{
 		return false;
 	}
@@ -125,8 +130,13 @@ bool ANightSchoolApparition::CanSeePlayer(ANightSchoolCharacter* Player) const
 	{
 		return false;
 	}
+	float Sight = 820.f;
+	if (Director && Director->IsWearingEarplugs())
+	{
+		Sight = 380.f;
+	}
 	const float Distance = FVector::Dist(MyEyes, Target);
-	if (Distance > 820.f)
+	if (Distance > Sight)
 	{
 		return false;
 	}
@@ -149,13 +159,19 @@ void ANightSchoolApparition::NotifyActorBeginOverlap(AActor* OtherActor)
 {
 	Super::NotifyActorBeginOverlap(OtherActor);
 	ANightSchoolCharacter* Player = Cast<ANightSchoolCharacter>(OtherActor);
-	if (!Player || Player->IsEnded() || Player->IsReading() || HitCooldown > 0.f || StunRemaining > 0.f)
+	ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld());
+	const bool bPuzzle = Director && Director->IsPuzzleActive();
+	if (!Player || Player->IsEnded() || Player->IsPreviewing() || HitCooldown > 0.f || StunRemaining > 0.f)
 	{
 		return;
 	}
-	if (ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld()))
+	if (Player->IsReading() && !bPuzzle)
 	{
-		if (Director->IsEnding() || Director->IsNoteOpen())
+		return;
+	}
+	if (Director)
+	{
+		if (Director->IsEnding() || Director->IsPreviewing() || (Director->IsNoteOpen() && !bPuzzle))
 		{
 			return;
 		}
@@ -175,7 +191,8 @@ void ANightSchoolApparition::Tick(float DeltaSeconds)
 	StunRemaining = FMath::Max(0.f, StunRemaining - DeltaSeconds);
 
 	ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld());
-	if (Director && (Director->IsEnding() || Director->IsNoteOpen()))
+	const bool bPuzzle = Director && Director->IsPuzzleActive();
+	if (Director && (Director->IsEnding() || Director->IsPreviewing() || (Director->IsNoteOpen() && !bPuzzle)))
 	{
 		return;
 	}
@@ -202,11 +219,20 @@ void ANightSchoolApparition::Tick(float DeltaSeconds)
 		bChasing = false;
 	}
 
+	FVector LurePoint = FVector::ZeroVector;
+	const bool bLured = Director && Director->GetLurePoint(Room, LurePoint);
+
 	FVector Goal = GetActorLocation();
 	if (StunRemaining > 0.f && Player)
 	{
 		Goal = GetActorLocation() + (GetActorLocation() - Player->GetActorLocation()).GetSafeNormal() * 200.f;
 		GetCharacterMovement()->MaxWalkSpeed = 150.f;
+	}
+	else if (bLured)
+	{
+		Goal = LurePoint;
+		GetCharacterMovement()->MaxWalkSpeed = 130.f;
+		bChasing = false;
 	}
 	else if (bChasing && Player)
 	{

@@ -40,7 +40,7 @@ namespace NightSchoolArt
 	UFont* GetRuntimeFont();
 	FSlateFontInfo FontInfo(float Size);
 
-	UTexture2D* MakePortrait(UObject* Outer);
-	UTexture2D* MakeRegisterCover(UObject* Outer);
+	UTexture2D* MakeMirror(UObject* Outer);
+	UTexture2D* MakeScoreSheet(UObject* Outer);
 	UTexture2D* CreateTexture(UObject* Outer, int32 Width, int32 Height, const TArray<FColor>& Pixels);
 }
