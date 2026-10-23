@@ -1,14 +1,14 @@
 # The Recitation
 
-On New Year's Eve, Chen Wangshu, a Chinese literature student at a provincial teachers' college, enters an old teaching building that is about to be demolished. The building once housed Wangjiang Night School in 1967. A register was ordered to be destroyed, but the names inside remain. As the player explores the abandoned classrooms, they uncover essays, a key, margin notes, a blackboard, a red candle, and a register, and decide where each name belongs.
+On New Year's Eve, Chen Wangshu, a Chinese literature student at a provincial teacher's college, enters an old teaching building scheduled for demolition. The building once housed the Wangjiang night school, a place that is remembered in fragments, rumors, and erased names. What remains is not a battlefield, but a memory space—one where the past keeps repeating itself through paper, objects, and unfinished lessons.
 
-This is not a combat game. It is a first-person narrative horror experience focused on reading, memory, and the ethics of recording other people's lives. The story unfolds through environmental storytelling: the player examines objects, leaves traces, and faces a difficult question—when you write down another person's name, are you preserving them, or erasing them?
+This is not a combat game. It is a first-person narrative horror experience focused on reading, memory, and the ethics of recording other people's lives. The story unfolds through environmental storytelling, document fragments, object interactions, and a slowly collapsing sense of certainty. The player does not shoot their way through the nightmare—they survive by deciphering what was omitted, remembering what was lost, and deciding what should be preserved.
 
-The experience is built in Unreal Engine 5 and is centered on a handcrafted night-school space created at runtime. The player is not fighting enemies; instead, they survive the night by reading carefully, using light, and managing fear.
+The experience is built in Unreal Engine 5 and centered on a handcrafted night-school space generated at runtime. The player explores a school suspended in a repeating night, where each discovered document, recovered object, or remembered name can change the ending.
 
 ## Gameplay
 
-Open `Student.uproject` with Unreal Engine 5.7 and press Play. The night school is generated above the template level, so no additional setup or asset downloads are required.
+Open `Student.uproject` with Unreal Engine 5.7 and press Play. The night school is constructed above the template level at runtime, so no additional setup, asset downloads, or custom level conversion are required.
 
 ### Controls
 
@@ -25,11 +25,10 @@ Open `Student.uproject` with Unreal Engine 5.7 and press Play. The night school 
 
 - Read documents, names, notes, and classroom artifacts to uncover the story.
 - Use the flashlight to push back the "miswritten" apparitions.
-- Crouch to break line of sight and avoid being noticed.
-- Encountering one of the figures causes you to forget a remembered name, but reading the relevant page again can restore it.
+- Crouch to break line of sight and avoid detection.
+- Encountering one of the figures causes you to forget a remembered name; reading the relevant page again can restore it.
 - When fear overwhelms you, the story can collapse into a nameless ending.
-
-The game uses a custom world-building flow: when the game starts, a `UNightSchoolGameInstance` creates the setting and spawns the night school without replacing the template level's GameMode.
+- The game's setting is built dynamically by `UNightSchoolGameInstance`, which spawns the night school without replacing the template level's `GameMode`.
 
 ## Endings
 
@@ -47,23 +46,23 @@ There are six possible endings, each driven by what the player reads, what they 
 ## Project structure
 
 - `Source/Student/`: core Unreal project code and gameplay systems
-- `Source/Student/NightSchool/`: custom horror narrative systems
+- `Source/Student/NightSchool/`: custom horror narrative systems and runtime world logic
 - `Content/NightSchool/`: project-specific art, UI, and story assets
 - `Config/`: project configuration files
 - `Student.uproject`: project entry point
 
 ### Main gameplay systems
 
-The custom game logic lives in the `NightSchool` module under `Source/Student/NightSchool/` and includes systems such as:
+The custom game logic is organized under `Source/Student/NightSchool/` and includes systems such as:
 
 - `UNightSchoolGameInstance`: builds the experience when the level loads
-- `ANightSchoolDirector`: manages the world, story progression, endings, objects, and fear state
-- `ANightSchoolCharacter`: custom avatar logic used for the playable night-school experience
-- `ANightSchoolProp`: interactivity for story items and props
+- `ANightSchoolDirector`: manages the world, story progression, endings, interactable objects, and fear state
+- `ANightSchoolCharacter`: custom avatar logic for the playable night-school experience
+- `ANightSchoolProp`: interactivity for story items and environment props
 - `ANightSchoolApparition`: ghost-like figures that stalk the school
-- `ANightSchoolStory` and related types: story logic, state, and ending conditions
+- `ANightSchoolStory` and related types: story state, narrative logic, and ending conditions
 
-The base first-person movement and interaction systems remain in the broader project, while the night-school story logic is layered on top of them.
+The base first-person movement and general interaction systems remain in the broader Unreal project, while the night-school narrative layer is built on top of them.
 
 ## Technical details
 
@@ -71,12 +70,12 @@ The base first-person movement and interaction systems remain in the broader pro
 - Many props and visual elements are generated at runtime rather than imported as full static scenes.
 - The "miswritten" figures use the existing project Mannequin skeleton and animation assets.
 - Chinese text uses the bundled `Droid Sans Fallback` font (Apache 2.0), located under `Content/NightSchool/Fonts/`.
-- The game instance starts the story automatically when the level loads; no custom GameMode change is required.
+- The game instance starts the story automatically when the level loads; no custom `GameMode` reassignment is required.
 
 ## Notes
 
-This project is a compact Unreal Engine horror game prototype that blends exploration, environmental storytelling, and choice-driven endings. It is designed as a playable narrative experiment rather than a large-scale production project.
+This project is a compact Unreal Engine horror game prototype that blends exploration, environmental storytelling, and choice-driven endings. It is designed as a playable narrative experiment rather than a large commercial production, but it contains a complete loop, multiple endings, and a custom systems framework for building haunted-space interactions.
 
 ## License and attribution
 
-The project includes font resources under the Apache 2.0 license, and the game uses standard Unreal Engine assets and generated project content. Please check the repository files themselves for licensing details on any third-party content.
+The project includes font resources under the Apache 2.0 license, and the game uses standard Unreal Engine assets and generated project content. Please check the repository files themselves for license and attribution details where applicable.
