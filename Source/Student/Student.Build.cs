@@ -18,7 +18,8 @@ public class Student : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
+			"Slate",
+			"SlateCore"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
@@ -30,7 +31,8 @@ public class Student : ModuleRules
 			"Student/Variant_Shooter",
 			"Student/Variant_Shooter/AI",
 			"Student/Variant_Shooter/UI",
-			"Student/Variant_Shooter/Weapons"
+			"Student/Variant_Shooter/Weapons",
+			"Student/NightSchool"
 		});
 
 		// Uncomment if you are using Slate UI
