@@ -725,7 +725,7 @@ void ANightSchoolDirector::BuildAudio()
 	DroneWave = NewObject<USoundWaveProcedural>(this);
 	DroneWave->SetSampleRate(22050);
 	DroneWave->NumChannels = 1;
-	DroneWave->Duration = 7200.f;
+	DroneWave->Duration = 100000.f;
 	DroneWave->SoundGroup = SOUNDGROUP_Ambient;
 	DroneWave->bLooping = false;
 
@@ -752,6 +752,8 @@ void ANightSchoolDirector::QueueDrone(float Seconds)
 	int16* Samples = reinterpret_cast<int16*>(Bytes.GetData());
 	const float HeartRate = FMath::Lerp(1.05f, 1.9f, FMath::Clamp(Fear / 100.f, 0.f, 1.f));
 	float Cursor = DronePhase;
+	float Beat = HeartPhase;
+	const float BeatStep = HeartRate / static_cast<float>(SampleRate);
 	for (int32 Frame = 0; Frame < Frames; ++Frame)
 	{
 		const float Time = Cursor;
@@ -760,12 +762,16 @@ void ANightSchoolDirector::QueueDrone(float Seconds)
 		{
 			Cursor -= 64.f;
 		}
+		Beat += BeatStep;
+		if (Beat >= 1.f)
+		{
+			Beat -= 1.f;
+		}
 		float Sample = 0.045f * FMath::Sin(2.f * PI * 55.f * Time);
 		Sample += 0.03f * FMath::Sin(2.f * PI * 82.4f * Time);
 		Sample += 0.012f * FMath::Sin(2.f * PI * 110.f * Time + 0.4f);
 		if (Fear > 28.f)
 		{
-			const float Beat = FMath::Fmod(HeartPhase + Time * HeartRate, 1.f);
 			const float Lub = FMath::Exp(-FMath::Square((Beat - 0.08f) * 28.f));
 			const float Dub = 0.65f * FMath::Exp(-FMath::Square((Beat - 0.22f) * 34.f));
 			Sample += (Lub + Dub) * FMath::Lerp(0.02f, 0.11f, Fear / 100.f);
@@ -773,7 +779,7 @@ void ANightSchoolDirector::QueueDrone(float Seconds)
 		Samples[Frame] = static_cast<int16>(FMath::Clamp(Sample, -1.f, 1.f) * 32000.f);
 	}
 	DronePhase = Cursor;
-	HeartPhase = FMath::Fmod(HeartPhase + Seconds * HeartRate, 1.f);
+	HeartPhase = Beat;
 	DroneWave->QueueAudio(Bytes.GetData(), Bytes.Num());
 }
 
@@ -1103,7 +1109,7 @@ void ANightSchoolDirector::TickPreview(float DeltaSeconds)
 
 void ANightSchoolDirector::TryBeginPreview()
 {
-	if (bPreviewing || bNoteOpen || IsEnding() || PreviewHold > 0.f)
+	if (bPreviewing || bNoteOpen || IsEnding() || PreviewHold > 0.f || ActivePuzzle >= 0)
 	{
 		return;
 	}
@@ -1311,11 +1317,9 @@ void ANightSchoolDirector::Tick(float DeltaSeconds)
 		}
 	}
 
-	AudioTime += DeltaSeconds;
-	if (AudioTime > 0.2f)
+	if (DroneWave && DroneWave->GetAvailableAudioByteCount() < 22050 * static_cast<int32>(sizeof(int16)))
 	{
-		AudioTime = 0.f;
-		QueueDrone(0.28f);
+		QueueDrone(0.5f);
 	}
 }
 

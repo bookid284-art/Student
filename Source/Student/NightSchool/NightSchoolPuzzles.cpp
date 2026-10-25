@@ -321,6 +321,7 @@ void ANightSchoolDirector::RestoreCheckpoint()
 	bPuzzle5 = Checkpoint.bPuzzle5;
 	bPuzzle6 = Checkpoint.bPuzzle6;
 	Fear = Checkpoint.Fear;
+	FearLock = 0.f;
 	LureTime = 0.f;
 	bNoteOpen = false;
 	ActivePuzzle = -1;
