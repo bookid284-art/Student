@@ -281,7 +281,6 @@ private:
 	float Fear = 0.f;
 	float FearLock = 0.f;
 	float StatusTime = 0.f;
-	float AudioTime = 0.f;
 	float DronePhase = 0.f;
 	float HeartPhase = 0.f;
 	float LureTime = 0.f;

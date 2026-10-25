@@ -180,7 +180,25 @@ void ANightSchoolApparition::NotifyActorBeginOverlap(AActor* OtherActor)
 	HitCooldown = 2.8f;
 	if (Waypoints.Num() > 0)
 	{
-		SetActorLocation(Waypoints[0] + FVector(0.f, 0.f, 88.f));
+		int32 Best = 0;
+		float BestDist = -1.f;
+		const FVector From = Player->GetActorLocation();
+		for (int32 Index = 0; Index < Waypoints.Num(); ++Index)
+		{
+			const float Dist = FVector::DistSquared2D(Waypoints[Index], From);
+			if (Dist > BestDist)
+			{
+				BestDist = Dist;
+				Best = Index;
+			}
+		}
+		WaypointIndex = (Best + 1) % Waypoints.Num();
+		SetActorLocation(Waypoints[Best], false, nullptr, ETeleportType::TeleportPhysics);
+		if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		{
+			Move->StopMovementImmediately();
+			Move->SetMovementMode(MOVE_Walking);
+		}
 	}
 }
 
