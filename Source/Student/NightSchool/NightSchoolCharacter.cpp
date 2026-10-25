@@ -108,6 +108,10 @@ void ANightSchoolCharacter::PossessedBy(AController* NewController)
 void ANightSchoolCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (!bMappingAdded)
+	{
+		AddMappingContext();
+	}
 	if (Interaction)
 	{
 		Interaction->RefreshFocus();
@@ -220,7 +224,40 @@ void ANightSchoolCharacter::SetPreviewing(bool bInPreview)
 
 void ANightSchoolCharacter::ApplyResume(const FVector& Location, const FRotator& View, float InBattery, float InStamina, bool bWasCrouched, bool bLightOn)
 {
-	SetActorLocation(Location);
+	UCharacterMovementComponent* Move = GetCharacterMovement();
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+	const float CrouchedHalf = Move ? Move->CrouchedHalfHeight : 60.f;
+	float StandingHalf = 88.f;
+	if (const ANightSchoolCharacter* Defaults = GetDefault<ANightSchoolCharacter>())
+	{
+		if (const UCapsuleComponent* DefaultCapsule = Defaults->GetCapsuleComponent())
+		{
+			StandingHalf = DefaultCapsule->GetUnscaledCapsuleHalfHeight();
+		}
+	}
+
+	if (Move)
+	{
+		Move->StopMovementImmediately();
+		Move->bWantsToCrouch = false;
+	}
+	if (Capsule && Capsule->GetUnscaledCapsuleHalfHeight() != StandingHalf)
+	{
+		Capsule->SetCapsuleSize(Capsule->GetUnscaledCapsuleRadius(), StandingHalf, false);
+	}
+	bIsCrouched = false;
+
+	FVector Target = Location;
+	if (bWasCrouched)
+	{
+		// 印台记下的是蹲着时的胶囊中心。先抬回站立高度，再让移动组件蹲下去，退回时才不会嵌进地板。
+		Target.Z += FMath::Max(0.f, StandingHalf - CrouchedHalf);
+	}
+	SetActorLocation(Target, false, nullptr, ETeleportType::TeleportPhysics);
+	if (Move)
+	{
+		Move->SetMovementMode(MOVE_Walking);
+	}
 	if (Controller)
 	{
 		Controller->SetControlRotation(View);
@@ -240,10 +277,6 @@ void ANightSchoolCharacter::ApplyResume(const FVector& Location, const FRotator&
 	if (bWasCrouched)
 	{
 		Crouch();
-	}
-	else
-	{
-		UnCrouch();
 	}
 }
 
