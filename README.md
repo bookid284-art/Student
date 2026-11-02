@@ -1,59 +1,77 @@
-# 里屋
+# The Inner Room
 
-English notes: [README_EN.md](README_EN.md)
+A first-person psychological horror game built in Unreal Engine 5. The player is a boarding high school student under academic pressure, and as the story unfolds, they begin to encounter a second layer of rooms behind the ordinary campus: a place where dread has form, silence is a weapon, and every clue matters.
 
-许知夏是住宿的高三理科生。单亲的母亲许桂芳每天打电话追问成绩，成绩不好时电话那头不再像问句，手机可以被锁，宿舍里装着摄像头。同学嘲笑面貌和精神状态，嘲笑分数，威逼请客，孤立，不愿意同桌。班主任梁老师觉得他聪明，却恨铁不成钢。
+This project is a narrative horror experience with exploration, environmental storytelling, and a structured progression system driven by chapter seals, notices, and room-based puzzle logic.
 
-压力大到一个程度，恶意在另一间屋里变成能走过来的东西。整场没有战斗。耳塞、镜头布、汽水和那点没灭的光只能用来周旋、躲开、把人引开。校医室退休的周先生把两扇门说完。一扇要用手拨开，带着那点光离开。一扇从柜子里面带上，人就留在这间屋里。
+## Story overview
 
-游玩始终是仓库里原来的第一人称。第一次走进每间房间，镜头会按代码把整间屋扫一遍，按 Tab 可以跳过。贴着墙按住 Q 向左倾，按住 E 向右倾，用来探路。
+Xu Zhixia is a top-track science student in her final year of high school. Her single mother, Xu Guifang, calls every day to check on her grades, and the pressure of school, family expectations, and isolation begins to invade every space in her life. In the dormitory, the ordinary walls are no longer neutral. The hallways hold a hidden logic, and the ghosts of fear and memory begin to move in a pattern of their own.
 
-主线分成六章。每一章结束要盖一枚章印，下一章的门才认。每间屋有一座红印台，按 G 把进度印下来。六组三环要在人走过来的时候拨完，八十秒。拨不完就退回上一座印台，不是另一种结局。按读完、来回躲开、再读完的走法，一轮大约六个小时。只冲文字会短不少。这里没有 Unreal 编辑器，这个时长没有在 Play 里计过时。
+The game does not rely on combat. Instead, it emphasizes tension, observation, and careful movement: turning the lights, listening for clues, leaning around corners, and choosing how to confront the truth behind the rooms.
 
-## 六章
+## Gameplay
 
-1. 未接。手机、通话间三页、值班记录、镜头布。章印按在前厅，走廊才开。
-2. 空位。江晚的四张条子和三页班级日志。坐下之后，把章印盖回值班室。
-3. 请客。硬币打开小卖部，后仓三张收据，账本钉到走廊。章印盖进通话间，办公室才收卷子。
-4. 恨铁。三页改卷批注、梁老师的字条、年级组三页会议。章印盖回空位，长榜才开。
-5. 榜。北廊四张加上长榜四张。章印送回已经盖住的镜头旁边，校医室才开。
-6. 两扇门。三页旧病历，周先生分两次说完。看清光里的自己，再用手拨开关离开，或从柜子里面留下。
+The player explores the environment in first person, interacting with doors, objects, and story fragments. The game is structured into six chapters, each with a required seal to unlock the next section.
 
-三篇作文仍然可以放在长凳上。放了，离开的结尾多一句。不放也能把两种结局走完。
+### Core mechanics
+- WASD to move
+- Mouse to look around
+- Shift to sprint
+- Ctrl to crouch
+- Q to lean left while near a wall
+- E to lean right while near a wall
+- G to interact
+- F to light the fading glow
+- Tab to close text or skip the room-introduction camera
+- R to replay the ending sequence
 
-六组环分别在通话间、教室、小卖部、办公室、长榜和校医室。数字写在那间屋的墙上。按 G 转动甲、乙、丙，再按确认。人会在这间屋里走。八十秒拨不完，就从上一座印台再来。贴墙按住 Q 或 E，可以把头探出去看墙上的数字。
+### Survival and traversal
+The light can drive back the faceless classmates. Crouching can cause them to lose sight of the player. Soda can distract them for roughly 18 seconds. These actions are not used as attacks; they are tools to help the player escape, read the environment, and survive the pressure of the space.
 
-江晚的条子不是恋爱。她曾经想同桌，后来没有。硬币只打开小卖部，不是再请一轮。林小满已经毕业，送回铅笔盒、月票和课表不是把她救出来。小卖部还有第二瓶汽水，校医室有一节备用电池。电量撑的是那点用来后退的光。
+## Chapters
 
-## 怎么玩
+1. Missed calls. The phone, three call transcripts, duty records, and the lens cloth. The chapter seal is placed in the front hall before the corridor opens.
+2. Empty seat. Jiang Wan's notes and class records. After sitting down, return the seal to the duty room.
+3. Treating. The coin opens the shop, receipts and records are found in the back room, and the chapter seal is placed before the office accepts the papers.
+4. The unforgiven score. Three grading notes, Liang's letter, and several meeting pages. Return the seal to the empty seat before the long wall of notices opens.
+5. The board. Four notices and the tall board. Return the seal to the covered lens before the infirmary opens.
+6. Two doors. Three old medical records, and the conversation with Zhou in two parts. Look into the light and confront the self behind it, then choose whether to leave or stay hidden.
 
-用已经装好的 Unreal Engine 5.7 打开 `Student.uproject`，直接 Play。里屋搭在示例关卡上方，不需要再摆关卡，也不要另外下载资源。
+## Endings
 
-- WASD 移动，鼠标环顾
-- Shift 跑，Ctrl 蹲
-- Q 按住向左倾，E 按住向右倾，贴着墙探出去看
-- G 交互，F 点亮那点没灭的光，Tab 合上文字，或跳过第一次进房间的镜头
-- 结局画面按 R 再走一遍
+The ending depends on the path taken through the final sequence and the clues gathered across the story.
 
-光能让没有脸的同学退后，蹲下能让他们看丢，汽水能引开大约十八秒。这些都不造成伤害。心神被压满也到不了结局，只会让人更想找一个没有声音的柜子。耳塞让他们更难看清你，但拨开关之前必须回床上拿下来。镜头布只能盖宿舍那一只。
-
-## 结局
-
-| 做法 | 条件 | 留下的问题 |
+| Ending | Condition | What remains |
 | --- | --- | --- |
-| 离开 | 听周先生把两扇门说完，在空位上坐过，把试卷交到办公室门口，没戴耳塞，看清光里的自己，用手拨开开关 | 走出去以后，母亲、老师和那个班都还在。光没有删除他们 |
-| 锁上 | 听周先生把两扇门说完，从柜子里面把门带上 | 安静是真的。明天那张还没交的卷子也一起被留下了 |
+| Leave | Finish the final conversation, sit at the empty seat, hand in the paper, keep the earplugs off, look clearly into the light, and turn the switch by hand | Morning remains ordinary, but the truth does not disappear |
+| Stay shut in | Finish the final conversation and close the cabinet from within | The silence is real, and the unfinished paper stays behind |
 
-五枚章印、八张告示、三页旧病历和三样旧物都在第二段话之前。心神满了也不会另外出现结局。
+## How to run
 
-## 资源和代码
+Open `Student.uproject` in Unreal Engine 5.7 and press Play. The project already includes the base level used for the experience and does not require extra map setup or asset downloads.
 
-- 房间用引擎自带的方块、球体、圆柱搭成
-- 裂开的镜子和试卷是运行时画的，不画一张可怖的脸
-- 没有脸的同学用项目里已有的 Mannequin
-- 中文使用随仓库附带的 Droid Sans Fallback（Apache 2.0，见 `Content/NightSchool/Fonts/`）
-- 光里那个穿校服的人，是 `Tools/Protagonist/generate.py` 生成的静态网格。编辑器未导入 FBX 时，同一位置用引擎方块按同样的颜色搭着。导入步骤写在 `Tools/Protagonist/README.md`
-- 玩法代码在 `Source/Student/NightSchool/`
-- 原有的第一人称移动和 `UStudentInteractionComponent` 仍被这场幻觉使用
+## Project notes
 
-进入 Play 之后，GameInstance 会自己开始。示例关卡原来的 GameMode 不用改。
+- Rooms are built from engine primitives such as cubes, spheres, and cylinders.
+- The cracked mirror and test papers are drawn at runtime.
+- The faceless classmates use the existing Mannequin asset in the project.
+- Chinese text uses the bundled Droid Sans Fallback font (Apache 2.0, located under `Content/NightSchool/Fonts/`).
+- The figure in the light is generated from `Tools/Protagonist/generate.py` as a static mesh. If the FBX is not imported yet, the same location is built from boxes in matching colors.
+- Gameplay code lives in `Source/Student/NightSchool/`.
+- The original first-person movement and `UStudentInteractionComponent` are still used as part of the illusion.
+
+When Play starts, the game instance begins automatically. No additional GameMode changes are required for the template map.
+
+## Repository layout notes
+
+- `README_EN.md` contains the English version of the project documentation.
+- `Tools/Protagonist/README.md` documents the generation of the static character mesh used in the final light scene.
+
+## License and attribution
+
+This project uses Unreal Engine and the bundled font assets from the project itself. Please refer to the repository files and engine package terms for any additional licensing details.
+
+---
+
+English version of the project README.
