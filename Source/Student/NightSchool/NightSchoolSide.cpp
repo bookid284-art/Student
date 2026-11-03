@@ -126,8 +126,8 @@ void ANightSchoolDirector::BuildSideMap()
 	AddBox(W(2610.f, 400.f, 43.f), FVector(500.f, 680.f, 4.f), Concrete, false, false);
 	AddBox(W(3210.f, 400.f, 43.f), FVector(520.f, 680.f, 4.f), DarkWood, false, false);
 	AddBox(W(3210.f, 1190.f, 43.f), FVector(520.f, 640.f, 4.f), Concrete, false, false);
-	AddBox(W(3300.f, 480.f, 150.f), FVector(16.f, 16.f, 220.f), DarkWood, false, false);
-	AddBox(W(3080.f, 220.f, 150.f), FVector(16.f, 16.f, 220.f), DarkWood, false, false);
+	AddBox(W(3480.f, 640.f, 150.f), FVector(16.f, 16.f, 220.f), DarkWood, false, false);
+	AddBox(W(3020.f, 80.f, 150.f), FVector(16.f, 16.f, 220.f), DarkWood, false, false);
 
 	const FLinearColor Brass(0.55f, 0.42f, 0.16f);
 	SpawnProp(ENightPropId::SouthDoor, W(-200.f, -1400.f, 145.f), FVector(68.f, 8.f, 100.f), DarkWood, FText::FromString(TEXT("推开南甬")), FVector(200.f, 0.f, 0.f), 90.f, TEXT("南甬"));
