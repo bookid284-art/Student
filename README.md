@@ -1,18 +1,18 @@
 # The Inner Room
 
-A first-person psychological horror game built in Unreal Engine 5. The player is a boarding high school student under academic pressure, and as the story unfolds, they begin to encounter a second layer of rooms behind the ordinary campus: a place where dread has form, silence is a weapon, and every clue matters.
+A close third-person psychological horror game built in Unreal Engine 5. The player is a boarding high school student under academic pressure, and as the story unfolds, they begin to encounter a second layer of rooms behind the ordinary campus: a place where dread has form, silence is a weapon, and every clue matters.
 
 This project is a narrative horror experience with exploration, environmental storytelling, and a structured progression system driven by chapter seals, notices, and room-based puzzle logic.
 
 ## Story overview
 
-Xu Zhixia is a top-track science student in her final year of high school. Her single mother, Xu Guifang, calls every day to check on her grades, and the pressure of school, family expectations, and isolation begins to invade every space in her life. In the dormitory, the ordinary walls are no longer neutral. The hallways hold a hidden logic, and the ghosts of fear and memory begin to move in a pattern of their own.
+Xu Zhixia is a top-track science student in his final year of high school. His single mother, Xu Guifang, calls every day to check on his grades, and the pressure of school, family expectations, and isolation begins to invade every space in his life. In the dormitory, the ordinary walls are no longer neutral. The hallways hold a hidden logic, and the ghosts of fear and memory begin to move in a pattern of their own.
 
 The game does not rely on combat. Instead, it emphasizes tension, observation, and careful movement: turning the lights, listening for clues, leaning around corners, and choosing how to confront the truth behind the rooms.
 
 ## Gameplay
 
-The player explores the environment in first person, interacting with doors, objects, and story fragments. The game is structured into six chapters, each with a required seal to unlock the next section.
+The camera sits on the right shoulder, close and narrow, so the body blocks the lower view and nothing behind him is visible until he turns. There is no face on that body. The only time he looks at a face of himself is the figure already standing in the light. The story is still six chapters, each with a required seal. Two more rings sit on the path that was already there: one on the coin box, one in the hall before the office takes the paper. A south walk, a tool room, and an east wing past the store are side exploration. They do not add a chapter or a third ending. Reading, backtracking, and walking those wings is meant to take about ten hours. Rushing the six doors is shorter. This environment has no Unreal Editor, so that length was not timed in Play.
 
 ### Core mechanics
 - WASD to move
@@ -59,7 +59,7 @@ Open `Student.uproject` in Unreal Engine 5.7 and press Play. The project already
 - Chinese text uses the bundled Droid Sans Fallback font (Apache 2.0, located under `Content/NightSchool/Fonts/`).
 - The figure in the light is generated from `Tools/Protagonist/generate.py` as a static mesh. If the FBX is not imported yet, the same location is built from boxes in matching colors.
 - Gameplay code lives in `Source/Student/NightSchool/`.
-- The original first-person movement and `UStudentInteractionComponent` are still used as part of the illusion.
+- The played body is the same primitive stand-in, seen from behind, with no face. `UStudentInteractionComponent` still traces from the camera.
 
 When Play starts, the game instance begins automatically. No additional GameMode changes are required for the template map.
 

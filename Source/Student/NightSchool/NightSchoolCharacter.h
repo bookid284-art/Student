@@ -7,6 +7,8 @@
 
 class UCameraComponent;
 class UInputAction;
+class USceneComponent;
+class UStaticMeshComponent;
 class UInputMappingContext;
 class USpotLightComponent;
 class UStudentInteractionComponent;
@@ -65,6 +67,7 @@ private:
 	void LeanRightStarted();
 	void LeanRightStopped();
 	void UpdateLean(float DeltaSeconds);
+	void BuildBody();
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UCameraComponent> Camera;
@@ -131,4 +134,12 @@ private:
 	float LeanAlpha = 0.f;
 	bool bLeanLeft = false;
 	bool bLeanRight = false;
+	bool bViewReady = false;
+	FVector SmoothedView = FVector::ZeroVector;
+
+	UPROPERTY()
+	TObjectPtr<USceneComponent> BodyRoot;
+
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> HeadParts;
 };

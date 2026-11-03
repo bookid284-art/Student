@@ -4,9 +4,9 @@ Xu Zhixia is a boarding science student in the last year of high school. Xu Guif
 
 Under that pressure he hallucinates a second set of rooms, where the malice has a body. There is no combat. Earplugs, a lens cloth, a bottle of soda, and a light that has not gone out are only for stalling and slipping past. Mr. Zhou, retired from the infirmary, explains the two doors. One is opened by hand, and an inner light leads out of the rooms. The other is shut from inside a closet, and he stays.
 
-Play stays in the first-person view already in this project. The first time a room is entered, code sweeps a camera around it. Tab skips that look. Hold Q to lean left and E to lean right, and look around a corner without stepping out.
+The camera is over the right shoulder and stays close. Field of view is narrow. The body fills the bottom of the frame, and the view does not show behind him until he turns. Fear pulls that camera in. It does not open a wider shot, and it does not add an ending. The body is the same uniformed stand-in used in the light room, without a face. The figure in the light is still the first time that face is there to be looked at. The first time a room is entered, code sweeps a camera around it. Tab skips that look. Hold Q to lean left and E to lean right. Leaning moves the camera, not the body, so a ghost still judges where he is standing.
 
-The clear is six chapters. Each one ends by stamping a seal before the next door accepts you. Every room has a red ink pad. Press G there to mark your place. Six sets of three rings have to be turned while someone is walking toward you. Each set lasts eighty seconds. If the rings are still wrong when the time runs out, you return to the last ink pad. That return is not a third ending. Read, double back, and hide, and one clear is meant to take about six hours. Skipping the sentences makes it shorter. This environment has no Unreal Editor, so that length was not timed in Play.
+The clear is six chapters. Each one ends by stamping a seal before the next door accepts you. Every room has a red ink pad. Press G there to mark your place. Rings have to be turned while someone is walking toward you. Each set lasts eighty seconds. If the rings are still wrong when the time runs out, you return to the last ink pad. That return is not a third ending. Two of the rings are on the old path: the coin box will not open until the dorm rings match digits split across the antechamber, the laundry, and the south walk; the office will not take the paper until the hall rings match digits split across the classroom, the call room, and the shop. The south walk, the tool room, the east porch, the bike shed, and the old reading room are side exploration. Four night-study pages can be left on a table there. Leaving them does not change either door. Read, double back, fail a few rings, and walk the side wing, and one clear is meant to take about ten hours. Skipping the sentences and the side rooms makes it shorter. This environment has no Unreal Editor, so that length was not timed in Play.
 
 ## Six chapters
 
@@ -19,7 +19,7 @@ The clear is six chapters. Each one ends by stamping a seal before the next door
 
 Three essays can still be left on the bench. Doing so adds a line to the leaving ending. Either ending can be reached without them.
 
-The six rings are in the call room, classroom, shop, office, long board, and infirmary. The digits are written on that room's wall. Press G to turn the three wheels, then confirm. Someone walks the room while you do it. Eighty seconds, then you are sent back to the last ink pad. Hold Q or E against a wall to lean out and read the digits.
+The original six rings are in the call room, classroom, shop, office, long board, and infirmary. The coin box and the hall add two more on the main path, and the bike shed and the tool room add two that are not required to finish. Digits are written on walls, not on the wheels. Press G to turn the three wheels, then confirm. Someone walks the room while you do it. Eighty seconds, then you are sent back to the last ink pad. Hold Q or E against a wall to lean the camera out and read the digits.
 
 Jiang Wan's notes are not a romance. She almost sat there, then did not. The coin only opens the shop. Lin Xiaoman has already graduated; returning her pencil case, bus pass, and timetable does not rescue her. A second bottle is in the shop, and a spare cell is in the infirmary. The battery feeds the small light used to make figures step back.
 
@@ -49,8 +49,8 @@ The five seals, eight notices, three old charts, and three returned objects all 
 - Rooms use engine basic shapes. The cracked mirror and the score sheet are drawn at runtime.
 - The faceless classmates use the Mannequin already in this project.
 - Chinese text uses the bundled Droid Sans Fallback font (Apache 2.0, `Content/NightSchool/Fonts/`).
-- The uniformed figure in the lit room is the static mesh from `Tools/Protagonist/generate.py`. Until that FBX is imported, the same spot is built from engine boxes in the same colors. Import steps are in `Tools/Protagonist/README.md`.
+- The uniformed figure in the lit room is the static mesh from `Tools/Protagonist/generate.py`. Until that FBX is imported, the same spot is built from engine boxes in the same colors. The body that walks is that same stand-in, seen from behind, with no eyes and no mouth. Import steps are in `Tools/Protagonist/README.md`.
 - Gameplay code lives in `Source/Student/NightSchool/`.
-- The existing first-person movement and `UStudentInteractionComponent` are what the hallucination uses.
+- `UStudentInteractionComponent` still traces from the camera. The camera is no longer in the head.
 
 On Play, the game instance starts the story. The template map's game mode does not need to be reassigned.
