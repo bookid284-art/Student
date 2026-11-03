@@ -99,5 +99,17 @@ enum class ENightPropId : uint8
 	SelfFigure,
 	InkPad,
 	Dial,
-	DialConfirm
+	DialConfirm,
+	SideKey,
+	SouthDoor,
+	ToolDoor,
+	SideDoor,
+	ShedDoor,
+	ReadDoor,
+	StudyA,
+	StudyB,
+	StudyC,
+	StudyD,
+	StudyBench,
+	ToolCabinet
 };

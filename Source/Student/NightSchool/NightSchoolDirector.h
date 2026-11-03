@@ -124,6 +124,23 @@ struct FNightSave
 	bool bPuzzle4 = false;
 	bool bPuzzle5 = false;
 	bool bPuzzle6 = false;
+	bool bPuzzle7 = false;
+	bool bPuzzle8 = false;
+	bool bPuzzle9 = false;
+	bool bPuzzle10 = false;
+	bool bHasSideKey = false;
+	bool bSideOpen = false;
+	bool bShedOpen = false;
+	bool bReadOpen = false;
+	bool bStudyA = false;
+	bool bStudyB = false;
+	bool bStudyC = false;
+	bool bStudyD = false;
+	bool bStudyKept = false;
+	bool bToolCell = false;
+	bool bSouthGhost = false;
+	bool bShedGhost = false;
+	bool bReadGhost = false;
 	TArray<uint8> Consumed;
 	TArray<uint8> OpenDoors;
 };
@@ -195,6 +212,12 @@ private:
 	void SpawnNoticeGhost();
 	void SpawnComputerGhost();
 	void SpawnAnnexGhost();
+	void SpawnSouthGhost();
+	void SpawnShedGhost();
+	void SpawnReadGhost();
+	void BuildSideMap();
+	void TryOpenReadingRoom();
+	int32 StudyCount() const;
 	int32 DutyCount() const;
 	int32 NoteCount() const;
 	int32 MinutesCount() const;
@@ -229,7 +252,7 @@ private:
 	void FailPuzzle();
 	void SpawnPuzzleChaser(int32 Index);
 	void ClearPuzzleChaser();
-	void RebuildGhosts(bool bHall, bool bShop, bool bNotice, bool bComputer, bool bAnnex);
+	void RebuildGhosts(bool bHall, bool bShop, bool bNotice, bool bComputer, bool bAnnex, bool bSouth, bool bShed, bool bRead);
 	const TCHAR* PuzzleLockedText(int32 Index) const;
 
 	void ShowNote(const TCHAR* InTitle, const TCHAR* InBody);
@@ -380,11 +403,28 @@ private:
 	bool bPuzzle4 = false;
 	bool bPuzzle5 = false;
 	bool bPuzzle6 = false;
+	bool bPuzzle7 = false;
+	bool bPuzzle8 = false;
+	bool bPuzzle9 = false;
+	bool bPuzzle10 = false;
+	bool bHasSideKey = false;
+	bool bSideOpen = false;
+	bool bShedOpen = false;
+	bool bReadOpen = false;
+	bool bStudyA = false;
+	bool bStudyB = false;
+	bool bStudyC = false;
+	bool bStudyD = false;
+	bool bStudyKept = false;
+	bool bToolCell = false;
+	bool bSouthGhost = false;
+	bool bShedGhost = false;
+	bool bReadGhost = false;
 
 	FNightSave Checkpoint;
 	int32 ActivePuzzle = -1;
 	float PuzzleTime = 0.f;
-	int32 Dials[6][3] = {};
+	int32 Dials[10][3] = {};
 
 	UPROPERTY()
 	TObjectPtr<ANightSchoolApparition> PuzzleGhost;
