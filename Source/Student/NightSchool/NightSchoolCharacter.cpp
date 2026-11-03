@@ -375,27 +375,43 @@ void ANightSchoolCharacter::UpdateLean(float DeltaSeconds)
 	{
 		Fear01 = FMath::Clamp(Director->GetFear() / 100.f, 0.f, 1.f);
 	}
-	const FRotator Control = Controller ? Controller->GetControlRotation() : GetActorRotation();
+	FRotator Control = Controller ? Controller->GetControlRotation() : GetActorRotation();
+	if (Controller)
+	{
+		const float ClampedPitch = FMath::ClampAngle(Control.Pitch, -48.f, 28.f);
+		if (!FMath::IsNearlyEqual(FRotator::NormalizeAxis(Control.Pitch), ClampedPitch, 0.05f))
+		{
+			Control.Pitch = ClampedPitch;
+			Controller->SetControlRotation(Control);
+		}
+	}
 	const FRotator YawOnly(0.f, Control.Yaw, 0.f);
 	const FVector Forward = YawOnly.Vector();
 	const FVector Right = FRotationMatrix(YawOnly).GetUnitAxis(EAxis::Y);
 	const float Time = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
 	const float Arm = FMath::Lerp(104.f, 76.f, Fear01);
 	const float Height = bIsCrouched ? 40.f : 60.f;
-	const FVector Focus = GetActorLocation() + FVector(0.f, 0.f, Height) + Right * (30.f + LeanAlpha * 42.f) + Forward * (FMath::Abs(LeanAlpha) * 14.f);
-	FVector Desired = Focus - Forward * Arm + FVector(0.f, 0.f, 8.f + FMath::Sin(Time * 2.1f) * Fear01 * 3.2f);
-	if (GetWorld())
+	// 射线从胶囊内部发出。肩膀外侧贴墙时会穿进墙里，从那里再探就找不到墙。
+	const FVector Safe = GetActorLocation() + FVector(0.f, 0.f, Height);
+	const FVector Aim = Safe + Right * (30.f + LeanAlpha * 42.f) + Forward * (FMath::Abs(LeanAlpha) * 14.f);
+	auto PullCamera = [this](const FVector& From, const FVector& To)
 	{
+		if (!GetWorld())
+		{
+			return To;
+		}
 		FHitResult Hit;
 		FCollisionQueryParams Params(SCENE_QUERY_STAT(NightShoulder), false, this);
-		if (GetWorld()->LineTraceSingleByChannel(Hit, Focus, Desired, ECC_Visibility, Params))
+		if (GetWorld()->LineTraceSingleByChannel(Hit, From, To, ECC_Visibility, Params))
 		{
-			Desired = Hit.ImpactPoint + Hit.ImpactNormal * 16.f;
+			return Hit.ImpactPoint + Hit.ImpactNormal * 16.f;
 		}
-	}
-	if (FVector::DistSquared(Desired, Focus) < FMath::Square(34.f))
+		return To;
+	};
+	FVector Desired = PullCamera(Safe, Aim - Forward * Arm + FVector(0.f, 0.f, 8.f + FMath::Sin(Time * 2.1f) * Fear01 * 3.2f));
+	if (FVector::DistSquared(Desired, Safe) < FMath::Square(42.f))
 	{
-		Desired = Focus - Forward * 22.f + Right * 36.f;
+		Desired = PullCamera(Safe, Safe - Forward * 28.f + Right * 34.f);
 	}
 	if (!bViewReady)
 	{
@@ -421,7 +437,7 @@ void ANightSchoolCharacter::UpdateLean(float DeltaSeconds)
 	View.Roll = LeanAlpha * -8.f + FMath::Sin(Time * 1.4f) * Fear01 * 1.6f;
 	Camera->SetWorldRotation(View);
 
-	const bool bShowHead = FVector::Dist(SmoothedView, Focus) > 48.f;
+	const bool bShowHead = FVector::Dist(SmoothedView, Safe) > 46.f;
 	for (UStaticMeshComponent* Part : HeadParts)
 	{
 		if (Part)
