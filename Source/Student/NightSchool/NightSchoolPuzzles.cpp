@@ -7,15 +7,55 @@
 
 namespace
 {
-	const int32 PuzzleCode[6][3] = {
+	const int32 PuzzleCode[10][3] = {
 		{6, 1, 4},
 		{3, 1, 2},
 		{4, 0, 8},
 		{7, 2, 5},
 		{5, 8, 1},
 		{1, 7, 0},
+		{2, 6, 9},
+		{8, 4, 0},
+		{9, 3, 5},
+		{1, 5, 7},
 	};
 	const float PuzzleLimit = 80.f;
+
+	bool ParsePuzzleMark(const FString& Mark, int32& OutIndex, int32* OutSlot)
+	{
+		if (Mark.Len() < 3 || Mark[0] != TEXT('P'))
+		{
+			return false;
+		}
+		int32 Cursor = 1;
+		if (Mark[Cursor] < TEXT('0') || Mark[Cursor] > TEXT('9'))
+		{
+			return false;
+		}
+		int32 Number = 0;
+		while (Cursor < Mark.Len() && Mark[Cursor] >= TEXT('0') && Mark[Cursor] <= TEXT('9'))
+		{
+			Number = Number * 10 + (Mark[Cursor] - TEXT('0'));
+			++Cursor;
+		}
+		const int32 Index = Number - 1;
+		if (Index < 0 || Index > 9 || Cursor >= Mark.Len())
+		{
+			return false;
+		}
+		OutIndex = Index;
+		if (!OutSlot)
+		{
+			return true;
+		}
+		const int32 Slot = Mark[Cursor] - TEXT('A');
+		if (Slot < 0 || Slot > 2)
+		{
+			return false;
+		}
+		*OutSlot = Slot;
+		return true;
+	}
 
 	bool IsSharedProp(ENightPropId Id)
 	{
@@ -45,6 +85,10 @@ bool ANightSchoolDirector::IsPuzzleDone(int32 Index) const
 	case 3: return bPuzzle4;
 	case 4: return bPuzzle5;
 	case 5: return bPuzzle6;
+	case 6: return bPuzzle7;
+	case 7: return bPuzzle8;
+	case 8: return bPuzzle9;
+	case 9: return bPuzzle10;
 	default: return false;
 	}
 }
@@ -59,6 +103,10 @@ void ANightSchoolDirector::SetPuzzleDone(int32 Index)
 	case 3: bPuzzle4 = true; break;
 	case 4: bPuzzle5 = true; break;
 	case 5: bPuzzle6 = true; break;
+	case 6: bPuzzle7 = true; break;
+	case 7: bPuzzle8 = true; break;
+	case 8: bPuzzle9 = true; break;
+	case 9: bPuzzle10 = true; break;
 	default: break;
 	}
 }
@@ -73,6 +121,10 @@ bool ANightSchoolDirector::PuzzleReady(int32 Index) const
 	case 3: return bOfficeOpen && DraftCount() >= 3;
 	case 4: return bAnnexOpen;
 	case 5: return ChartCount() >= 3 && bItemsReturned;
+	case 6: return bPhoneRead;
+	case 7: return bHasExam && bSeal3Set;
+	case 8: return bInfirmaryOpen;
+	case 9: return true;
 	default: return false;
 	}
 }
@@ -87,6 +139,9 @@ const TCHAR* ANightSchoolDirector::PuzzleLockedText(int32 Index) const
 	case 3: return TEXT("三页批注还没看完，或者门还关着。钟先别拨。");
 	case 4: return TEXT("长榜的门还关着。");
 	case 5: return TEXT("病历和托盘还没做完。药柜先别转。");
+	case 6: return TEXT("先看过那只手机。铁盒的环先别转。");
+	case 7: return TEXT("第三章的章还没盖，或者卷子还没拿。走廊的环先别转。");
+	case 8: return TEXT("校医室还没开。车棚的环先别转。甲在宿舍，乙在长榜，丙在校医室。");
 	default: return TEXT("现在还转不了。");
 	}
 }
@@ -199,6 +254,23 @@ void ANightSchoolDirector::CaptureCheckpoint(const FString& RoomName, const FVec
 	Checkpoint.bPuzzle4 = bPuzzle4;
 	Checkpoint.bPuzzle5 = bPuzzle5;
 	Checkpoint.bPuzzle6 = bPuzzle6;
+	Checkpoint.bPuzzle7 = bPuzzle7;
+	Checkpoint.bPuzzle8 = bPuzzle8;
+	Checkpoint.bPuzzle9 = bPuzzle9;
+	Checkpoint.bPuzzle10 = bPuzzle10;
+	Checkpoint.bHasSideKey = bHasSideKey;
+	Checkpoint.bSideOpen = bSideOpen;
+	Checkpoint.bShedOpen = bShedOpen;
+	Checkpoint.bReadOpen = bReadOpen;
+	Checkpoint.bStudyA = bStudyA;
+	Checkpoint.bStudyB = bStudyB;
+	Checkpoint.bStudyC = bStudyC;
+	Checkpoint.bStudyD = bStudyD;
+	Checkpoint.bStudyKept = bStudyKept;
+	Checkpoint.bToolCell = bToolCell;
+	Checkpoint.bSouthGhost = bSouthGhost;
+	Checkpoint.bShedGhost = bShedGhost;
+	Checkpoint.bReadGhost = bReadGhost;
 	Checkpoint.Consumed.Reset();
 	Checkpoint.OpenDoors.Reset();
 	for (ANightSchoolProp* Prop : Props)
@@ -320,6 +392,23 @@ void ANightSchoolDirector::RestoreCheckpoint()
 	bPuzzle4 = Checkpoint.bPuzzle4;
 	bPuzzle5 = Checkpoint.bPuzzle5;
 	bPuzzle6 = Checkpoint.bPuzzle6;
+	bPuzzle7 = Checkpoint.bPuzzle7;
+	bPuzzle8 = Checkpoint.bPuzzle8;
+	bPuzzle9 = Checkpoint.bPuzzle9;
+	bPuzzle10 = Checkpoint.bPuzzle10;
+	bHasSideKey = Checkpoint.bHasSideKey;
+	bSideOpen = Checkpoint.bSideOpen;
+	bShedOpen = Checkpoint.bShedOpen;
+	bReadOpen = Checkpoint.bReadOpen;
+	bStudyA = Checkpoint.bStudyA;
+	bStudyB = Checkpoint.bStudyB;
+	bStudyC = Checkpoint.bStudyC;
+	bStudyD = Checkpoint.bStudyD;
+	bStudyKept = Checkpoint.bStudyKept;
+	bToolCell = Checkpoint.bToolCell;
+	bSouthGhost = Checkpoint.bSouthGhost;
+	bShedGhost = Checkpoint.bShedGhost;
+	bReadGhost = Checkpoint.bReadGhost;
 	Fear = Checkpoint.Fear;
 	FearLock = 0.f;
 	LureTime = 0.f;
@@ -397,7 +486,10 @@ void ANightSchoolDirector::RestoreCheckpoint()
 	const bool bNotice = bNoticeGhost;
 	const bool bComputer = bComputerGhost;
 	const bool bAnnex = bAnnexGhost;
-	RebuildGhosts(bHall, bShop, bNotice, bComputer, bAnnex);
+	const bool bSouth = bSouthGhost;
+	const bool bShed = bShedGhost;
+	const bool bRead = bReadGhost;
+	RebuildGhosts(bHall, bShop, bNotice, bComputer, bAnnex, bSouth, bShed, bRead);
 
 	if (ANightSchoolCharacter* Current = Player())
 	{
@@ -440,7 +532,7 @@ void ANightSchoolDirector::UseInkPad(ANightSchoolProp* Prop)
 
 void ANightSchoolDirector::BeginPuzzle(int32 Index)
 {
-	if (Index < 0 || Index > 5 || IsPuzzleDone(Index) || ActivePuzzle == Index)
+	if (Index < 0 || Index > 9 || IsPuzzleDone(Index) || ActivePuzzle == Index)
 	{
 		return;
 	}
@@ -456,6 +548,12 @@ void ANightSchoolDirector::FinishPuzzle(int32 Index)
 	ActivePuzzle = -1;
 	PuzzleTime = 0.f;
 	ClearPuzzleChaser();
+	if (Index == 8)
+	{
+		TryOpenReadingRoom();
+		ShowStatus(TEXT("三环对上了。旧阅览的门开了。这不是第三扇门。"), 4.2f);
+		return;
+	}
 	ShowStatus(TEXT("三环对上了。这一轮的追赶停了。"), 4.2f);
 }
 
@@ -487,13 +585,9 @@ void ANightSchoolDirector::UseDial(ANightSchoolProp* Prop)
 		return;
 	}
 	const FString Mark = Prop->GetMarker().ToString();
-	if (Mark.Len() < 3)
-	{
-		return;
-	}
-	const int32 Index = Mark[1] - TEXT('1');
-	const int32 Slot = Mark[2] - TEXT('A');
-	if (Index < 0 || Index > 5 || Slot < 0 || Slot > 2)
+	int32 Index = 0;
+	int32 Slot = 0;
+	if (!ParsePuzzleMark(Mark, Index, &Slot))
 	{
 		return;
 	}
@@ -524,12 +618,8 @@ void ANightSchoolDirector::UseDialConfirm(ANightSchoolProp* Prop)
 		return;
 	}
 	const FString Mark = Prop->GetMarker().ToString();
-	if (Mark.Len() < 2)
-	{
-		return;
-	}
-	const int32 Index = Mark[1] - TEXT('1');
-	if (Index < 0 || Index > 5)
+	int32 Index = 0;
+	if (!ParsePuzzleMark(Mark, Index, nullptr))
 	{
 		return;
 	}
@@ -606,6 +696,24 @@ void ANightSchoolDirector::SpawnPuzzleChaser(int32 Index)
 		Points.Add(W(-150.f, 1350.f, 128.f));
 		Glyph = TEXT("门");
 	}
+	else if (Index == 6)
+	{
+		Room = FBox(W(-1020.f, 60.f, -20.f), W(-360.f, 740.f, 420.f));
+		Points.Add(W(-800.f, 300.f, 128.f));
+		Points.Add(W(-500.f, 500.f, 128.f));
+		Points.Add(W(-900.f, 550.f, 128.f));
+		Points.Add(W(-480.f, 250.f, 128.f));
+		Glyph = TEXT("盒");
+	}
+	else if (Index == 9)
+	{
+		Room = FBox(W(-1040.f, -2500.f, -20.f), W(-560.f, -1480.f, 420.f));
+		Points.Add(W(-900.f, -1900.f, 128.f));
+		Points.Add(W(-700.f, -2300.f, 128.f));
+		Points.Add(W(-960.f, -2100.f, 128.f));
+		Points.Add(W(-680.f, -1700.f, 128.f));
+		Glyph = TEXT("具");
+	}
 	else
 	{
 		return;
@@ -613,7 +721,7 @@ void ANightSchoolDirector::SpawnPuzzleChaser(int32 Index)
 	PuzzleGhost = SpawnGhost(Room, Points, Glyph);
 }
 
-void ANightSchoolDirector::RebuildGhosts(bool bHall, bool bShop, bool bNotice, bool bComputer, bool bAnnex)
+void ANightSchoolDirector::RebuildGhosts(bool bHall, bool bShop, bool bNotice, bool bComputer, bool bAnnex, bool bSouth, bool bShed, bool bRead)
 {
 	PuzzleGhost = nullptr;
 	for (ANightSchoolApparition* Ghost : Apparitions)
@@ -629,6 +737,9 @@ void ANightSchoolDirector::RebuildGhosts(bool bHall, bool bShop, bool bNotice, b
 	bNoticeGhost = false;
 	bComputerGhost = false;
 	bAnnexGhost = false;
+	bSouthGhost = false;
+	bShedGhost = false;
+	bReadGhost = false;
 	if (bHall)
 	{
 		SpawnHallGhosts();
@@ -648,6 +759,18 @@ void ANightSchoolDirector::RebuildGhosts(bool bHall, bool bShop, bool bNotice, b
 	if (bAnnex)
 	{
 		SpawnAnnexGhost();
+	}
+	if (bSouth)
+	{
+		SpawnSouthGhost();
+	}
+	if (bShed)
+	{
+		SpawnShedGhost();
+	}
+	if (bRead)
+	{
+		SpawnReadGhost();
 	}
 }
 
@@ -731,4 +854,43 @@ void ANightSchoolDirector::BuildCheckpoints()
 	Wheel(0.f, 1120.f, TEXT("P6C"), TEXT("丙"));
 	Plate(-80.f, 1250.f, TEXT("P6OK"));
 	AddLabel(W(-40.f, 1220.f, 168.f), 0.f, TEXT("1   7   0"), 18.f, FColor(220, 190, 150));
+
+	Wheel(-900.f, 400.f, TEXT("P7A"), TEXT("甲"));
+	Wheel(-450.f, 180.f, TEXT("P7B"), TEXT("乙"));
+	Wheel(-420.f, 620.f, TEXT("P7C"), TEXT("丙"));
+	Plate(-640.f, 180.f, TEXT("P7OK"));
+	AddLabel(W(180.f, -200.f, 168.f), 90.f, TEXT("甲  2"), 18.f, FColor(220, 190, 150));
+	AddLabel(W(-80.f, -780.f, 168.f), 0.f, TEXT("乙  6"), 18.f, FColor(220, 190, 150));
+	AddLabel(W(-300.f, -2100.f, 168.f), 90.f, TEXT("丙  9"), 18.f, FColor(220, 190, 150));
+
+	Wheel(-80.f, 250.f, TEXT("P8A"), TEXT("甲"));
+	Wheel(80.f, 500.f, TEXT("P8B"), TEXT("乙"));
+	Wheel(-40.f, 780.f, TEXT("P8C"), TEXT("丙"));
+	Plate(40.f, 360.f, TEXT("P8OK"));
+	AddLabel(W(450.f, 700.f, 168.f), 180.f, TEXT("甲  8"), 18.f, FColor(220, 190, 150));
+	AddLabel(W(-1300.f, -800.f, 168.f), 0.f, TEXT("乙  4"), 18.f, FColor(220, 190, 150));
+	AddLabel(W(1350.f, 550.f, 168.f), 180.f, TEXT("丙  0"), 18.f, FColor(220, 190, 150));
+
+	Wheel(3100.f, 200.f, TEXT("P9A"), TEXT("甲"));
+	Wheel(3350.f, 600.f, TEXT("P9B"), TEXT("乙"));
+	Wheel(3400.f, 180.f, TEXT("P9C"), TEXT("丙"));
+	Plate(3180.f, 450.f, TEXT("P9OK"));
+	AddLabel(W(-980.f, 500.f, 168.f), 0.f, TEXT("甲  9"), 18.f, FColor(220, 190, 150));
+	AddLabel(W(1050.f, 2100.f, 168.f), -90.f, TEXT("乙  3"), 18.f, FColor(220, 190, 150));
+	AddLabel(W(220.f, 1200.f, 168.f), 180.f, TEXT("丙  5"), 18.f, FColor(220, 190, 150));
+	AddLabel(W(3200.f, 500.f, 168.f), 180.f, TEXT("甲宿舍  乙长榜  丙校医室"), 14.f, FColor(220, 190, 150));
+
+	Wheel(-900.f, -1800.f, TEXT("P10A"), TEXT("甲"));
+	Wheel(-700.f, -2400.f, TEXT("P10B"), TEXT("乙"));
+	Wheel(-980.f, -2200.f, TEXT("P10C"), TEXT("丙"));
+	Plate(-800.f, -2100.f, TEXT("P10OK"));
+	AddLabel(W(-200.f, -1800.f, 168.f), 90.f, TEXT("甲  1"), 18.f, FColor(220, 190, 150));
+	AddLabel(W(-250.f, -2400.f, 168.f), 90.f, TEXT("乙  5"), 18.f, FColor(220, 190, 150));
+	AddLabel(W(-600.f, -1600.f, 168.f), 0.f, TEXT("丙  7"), 18.f, FColor(220, 190, 150));
+
+	Pad(-160.f, -1700.f, TEXT("南甬"));
+	Pad(-800.f, -2000.f, TEXT("工具间"));
+	Pad(2600.f, 620.f, TEXT("门廊"));
+	Pad(3300.f, 250.f, TEXT("车棚"));
+	Pad(3400.f, 1100.f, TEXT("旧阅览"));
 }

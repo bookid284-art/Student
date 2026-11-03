@@ -2,9 +2,12 @@
 
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SceneComponent.h"
 #include "Components/SpotLightComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "EnhancedInputComponent.h"
+#include "Math/RotationMatrix.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -13,6 +16,7 @@
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
 #include "Kismet/GameplayStatics.h"
+#include "NightSchool/NightSchoolArt.h"
 #include "NightSchool/NightSchoolDirector.h"
 #include "NightSchool/NightSchoolSlate.h"
 #include "Student.h"
@@ -61,7 +65,7 @@ ANightSchoolCharacter::ANightSchoolCharacter()
 	Camera->SetupAttachment(GetCapsuleComponent());
 	Camera->SetRelativeLocation(FVector(0.f, 0.f, 64.f));
 	Camera->bUsePawnControlRotation = false;
-	Camera->SetFieldOfView(78.f);
+	Camera->SetFieldOfView(66.f);
 
 	Flashlight = CreateDefaultSubobject<USpotLightComponent>(TEXT("Flashlight"));
 	Flashlight->SetupAttachment(Camera);
@@ -90,7 +94,9 @@ void ANightSchoolCharacter::BeginPlay()
 	if (Flashlight)
 	{
 		Flashlight->SetVisibility(false);
+		Flashlight->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	}
+	BuildBody();
 }
 
 void ANightSchoolCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -224,6 +230,7 @@ void ANightSchoolCharacter::SetPreviewing(bool bInPreview)
 
 void ANightSchoolCharacter::ApplyResume(const FVector& Location, const FRotator& View, float InBattery, float InStamina, bool bWasCrouched, bool bLightOn)
 {
+	bViewReady = false;
 	UCharacterMovementComponent* Move = GetCharacterMovement();
 	UCapsuleComponent* Capsule = GetCapsuleComponent();
 	const float CrouchedHalf = Move ? Move->CrouchedHalfHeight : 60.f;
@@ -278,6 +285,69 @@ void ANightSchoolCharacter::ApplyResume(const FVector& Location, const FRotator&
 	{
 		Crouch();
 	}
+	UpdateLean(0.f);
+}
+
+void ANightSchoolCharacter::BuildBody()
+{
+	if (BodyRoot || !NightSchoolArt::Cube())
+	{
+		return;
+	}
+	BodyRoot = NewObject<USceneComponent>(this, TEXT("BodyRoot"));
+	BodyRoot->SetupAttachment(GetCapsuleComponent());
+	BodyRoot->SetRelativeLocation(FVector(0.f, 0.f, -88.f));
+	BodyRoot->RegisterComponent();
+
+	const FLinearColor Skin(0.62f, 0.45f, 0.36f);
+	const FLinearColor Hair(0.06f, 0.05f, 0.045f);
+	const FLinearColor Jacket(0.12f, 0.18f, 0.32f);
+	const FLinearColor Shirt(0.82f, 0.82f, 0.78f);
+	const FLinearColor Trousers(0.10f, 0.11f, 0.13f);
+	const FLinearColor Shoes(0.05f, 0.05f, 0.05f);
+	const FLinearColor Glass(0.02f, 0.02f, 0.02f);
+	const FLinearColor Pack(0.16f, 0.17f, 0.18f);
+	const FLinearColor Book(0.55f, 0.16f, 0.12f);
+
+	auto AddPart = [this](UStaticMesh* Mesh, const FVector& FromFeet, const FVector& Scale, const FLinearColor& Color, bool bHead)
+	{
+		if (!Mesh || !BodyRoot)
+		{
+			return;
+		}
+		UStaticMeshComponent* Part = NewObject<UStaticMeshComponent>(this);
+		Part->SetStaticMesh(Mesh);
+		Part->SetupAttachment(BodyRoot);
+		Part->SetRelativeLocation(FromFeet);
+		Part->SetRelativeScale3D(Scale);
+		Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Part->SetCastShadow(false);
+		if (UMaterialInstanceDynamic* Mid = NightSchoolArt::MakeColor(this, Color))
+		{
+			Part->SetMaterial(0, Mid);
+		}
+		Part->RegisterComponent();
+		if (bHead)
+		{
+			HeadParts.Add(Part);
+		}
+	};
+
+	AddPart(NightSchoolArt::Cube(), FVector(2.f, 0.f, 3.f), FVector(0.30f, 0.22f, 0.06f), Shoes, false);
+	AddPart(NightSchoolArt::Cube(), FVector(0.f, 0.f, 46.f), FVector(0.18f, 0.24f, 0.80f), Trousers, false);
+	AddPart(NightSchoolArt::Cube(), FVector(0.f, 0.f, 108.f), FVector(0.20f, 0.38f, 0.52f), Jacket, false);
+	AddPart(NightSchoolArt::Cube(), FVector(8.f, 0.f, 128.f), FVector(0.04f, 0.16f, 0.10f), Shirt, false);
+	AddPart(NightSchoolArt::Cube(), FVector(0.f, -26.f, 108.f), FVector(0.10f, 0.10f, 0.46f), Jacket, false);
+	AddPart(NightSchoolArt::Cube(), FVector(0.f, 26.f, 108.f), FVector(0.10f, 0.10f, 0.46f), Jacket, false);
+	AddPart(NightSchoolArt::Cube(), FVector(2.f, -26.f, 82.f), FVector(0.08f, 0.08f, 0.08f), Skin, false);
+	AddPart(NightSchoolArt::Cube(), FVector(8.f, 22.f, 84.f), FVector(0.08f, 0.08f, 0.08f), Skin, false);
+	AddPart(NightSchoolArt::Cube(), FVector(14.f, 24.f, 86.f), FVector(0.14f, 0.10f, 0.02f), Book, false);
+	AddPart(NightSchoolArt::Cube(), FVector(-16.f, 0.f, 112.f), FVector(0.12f, 0.28f, 0.36f), Pack, false);
+	AddPart(NightSchoolArt::Cube(), FVector(0.f, 0.f, 137.f), FVector(0.10f, 0.10f, 0.10f), Skin, true);
+	AddPart(NightSchoolArt::Sphere(), FVector(0.f, 0.f, 152.f), FVector(0.24f), Skin, true);
+	AddPart(NightSchoolArt::Sphere(), FVector(-2.f, 0.f, 158.f), FVector(0.25f), Hair, true);
+	AddPart(NightSchoolArt::Sphere(), FVector(8.f, 0.f, 150.f), FVector(0.20f), Hair, true);
+	AddPart(NightSchoolArt::Cube(), FVector(-7.f, 0.f, 154.f), FVector(0.02f, 0.16f, 0.02f), Glass, true);
 }
 
 void ANightSchoolCharacter::UpdateLean(float DeltaSeconds)
@@ -286,39 +356,110 @@ void ANightSchoolCharacter::UpdateLean(float DeltaSeconds)
 	{
 		return;
 	}
-	float Desired = 0.f;
+	float DesiredLean = 0.f;
 	if (!bPreviewing && !bReading && !bEnded)
 	{
 		if (bLeanLeft && !bLeanRight)
 		{
-			Desired = -1.f;
+			DesiredLean = -1.f;
 		}
 		else if (bLeanRight && !bLeanLeft)
 		{
-			Desired = 1.f;
+			DesiredLean = 1.f;
 		}
 	}
-	LeanAlpha = FMath::FInterpTo(LeanAlpha, Desired, DeltaSeconds, 8.f);
-	const float Side = LeanAlpha * 34.f;
-	const float Forward = FMath::Abs(LeanAlpha) * 12.f;
-	const FVector Base = GetActorLocation() + FVector(0.f, 0.f, 64.f);
-	FVector DesiredWorld = GetActorTransform().TransformPosition(FVector(Forward, Side, 64.f));
-	if (GetWorld() && FMath::Abs(LeanAlpha) > 0.02f)
+	LeanAlpha = FMath::FInterpTo(LeanAlpha, DesiredLean, DeltaSeconds, 8.f);
+
+	float Fear01 = 0.f;
+	if (const ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld()))
 	{
-		FHitResult Hit;
-		FCollisionQueryParams Params(SCENE_QUERY_STAT(NightLean), false, this);
-		if (GetWorld()->LineTraceSingleByChannel(Hit, Base, DesiredWorld, ECC_Visibility, Params))
-		{
-			DesiredWorld = Hit.ImpactPoint + Hit.ImpactNormal * 10.f;
-		}
+		Fear01 = FMath::Clamp(Director->GetFear() / 100.f, 0.f, 1.f);
 	}
-	const FVector Relative = GetActorTransform().InverseTransformPosition(DesiredWorld);
-	Camera->SetRelativeLocation(FVector(Relative.X, Relative.Y, 64.f));
+	FRotator Control = Controller ? Controller->GetControlRotation() : GetActorRotation();
 	if (Controller)
 	{
-		FRotator View = Controller->GetControlRotation();
-		View.Roll = LeanAlpha * -8.f;
-		Camera->SetWorldRotation(View);
+		const float ClampedPitch = FMath::ClampAngle(Control.Pitch, -48.f, 28.f);
+		if (!FMath::IsNearlyEqual(FRotator::NormalizeAxis(Control.Pitch), ClampedPitch, 0.05f))
+		{
+			Control.Pitch = ClampedPitch;
+			Controller->SetControlRotation(Control);
+		}
+	}
+	const FRotator YawOnly(0.f, Control.Yaw, 0.f);
+	const FVector Forward = YawOnly.Vector();
+	const FVector Right = FRotationMatrix(YawOnly).GetUnitAxis(EAxis::Y);
+	const float Time = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
+	const float Arm = FMath::Lerp(104.f, 76.f, Fear01);
+	const float Height = bIsCrouched ? 40.f : 60.f;
+	// 射线从胶囊内部发出。肩膀外侧贴墙时会穿进墙里，从那里再探就找不到墙。
+	const FVector Safe = GetActorLocation() + FVector(0.f, 0.f, Height);
+	const FVector Aim = Safe + Right * (30.f + LeanAlpha * 42.f) + Forward * (FMath::Abs(LeanAlpha) * 14.f);
+	auto PullCamera = [this](const FVector& From, const FVector& To)
+	{
+		if (!GetWorld())
+		{
+			return To;
+		}
+		FHitResult Hit;
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(NightShoulder), false, this);
+		if (GetWorld()->LineTraceSingleByChannel(Hit, From, To, ECC_Visibility, Params))
+		{
+			return Hit.ImpactPoint + Hit.ImpactNormal * 16.f;
+		}
+		return To;
+	};
+	FVector Desired = PullCamera(Safe, Aim - Forward * Arm + FVector(0.f, 0.f, 8.f + FMath::Sin(Time * 2.1f) * Fear01 * 3.2f));
+	if (FVector::DistSquared(Desired, Safe) < FMath::Square(42.f))
+	{
+		Desired = PullCamera(Safe, Safe - Forward * 28.f + Right * 34.f);
+	}
+	if (!bViewReady)
+	{
+		SmoothedView = Desired;
+		bViewReady = true;
+	}
+	else if (GetWorld())
+	{
+		const FVector Next = FMath::VInterpTo(SmoothedView, Desired, DeltaSeconds, 8.f);
+		FHitResult Block;
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(NightShoulderSmooth), false, this);
+		if (GetWorld()->LineTraceSingleByChannel(Block, SmoothedView, Next, ECC_Visibility, Params))
+		{
+			SmoothedView = Desired;
+		}
+		else
+		{
+			SmoothedView = Next;
+		}
+	}
+	Camera->SetWorldLocation(SmoothedView);
+	FRotator View = Control;
+	View.Roll = LeanAlpha * -8.f + FMath::Sin(Time * 1.4f) * Fear01 * 1.6f;
+	Camera->SetWorldRotation(View);
+
+	const bool bShowHead = FVector::Dist(SmoothedView, Safe) > 46.f;
+	for (UStaticMeshComponent* Part : HeadParts)
+	{
+		if (Part)
+		{
+			Part->SetVisibility(bShowHead);
+		}
+	}
+	if (BodyRoot)
+	{
+		float Bob = 0.f;
+		if (GetVelocity().SizeSquared() > 80.f)
+		{
+			Bob = FMath::Sin(Time * (bIsCrouched ? 6.f : 9.5f)) * (bIsCrouched ? 0.7f : 1.7f);
+		}
+		const float Half = GetCapsuleComponent() ? GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() : 88.f;
+		BodyRoot->SetRelativeLocation(FVector(0.f, 0.f, -Half + Bob));
+	}
+	if (Flashlight)
+	{
+		const FVector Chest = GetActorLocation() + Forward * 34.f + Right * 14.f + FVector(0.f, 0.f, bIsCrouched ? 28.f : 46.f);
+		Flashlight->SetWorldLocation(Chest);
+		Flashlight->SetWorldRotation(View);
 	}
 }
 
@@ -504,6 +645,9 @@ void ANightSchoolCharacter::Look(const FInputActionValue& Value)
 	const FVector2D Axis = Value.Get<FVector2D>();
 	AddControllerYawInput(Axis.X);
 	AddControllerPitchInput(Axis.Y);
+	FRotator Rot = Controller->GetControlRotation();
+	Rot.Pitch = FMath::ClampAngle(Rot.Pitch, -48.f, 28.f);
+	Controller->SetControlRotation(Rot);
 }
 
 void ANightSchoolCharacter::SprintStarted()
