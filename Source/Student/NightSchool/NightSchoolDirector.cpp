@@ -292,6 +292,7 @@ void ANightSchoolDirector::BuildWorld()
 	}
 	BuildShell();
 	BuildStructure();
+	BuildSideMap();
 	BuildDressing();
 	BuildLights();
 	BuildRooms();
@@ -306,20 +307,20 @@ void ANightSchoolDirector::BuildWorld()
 
 void ANightSchoolDirector::BuildShell()
 {
-	AddBox(W(0.f, 900.f, 20.f), FVector(4800.f, 5200.f, 40.f), Concrete, true, true);
-	AddBox(W(0.f, 900.f, 860.f), FVector(4800.f, 5200.f, 24.f), Night, false, true);
-	AddBox(W(0.f, 3500.f, 450.f), FVector(4800.f, 40.f, 820.f), Night, false, true);
-	AddBox(W(0.f, -1700.f, 450.f), FVector(4800.f, 40.f, 820.f), Night, false, true);
-	AddBox(W(2400.f, 900.f, 450.f), FVector(40.f, 5200.f, 820.f), Night, false, true);
-	AddBox(W(-2400.f, 900.f, 450.f), FVector(40.f, 5200.f, 820.f), Night, false, true);
+	AddBox(W(600.f, 400.f, 20.f), FVector(6000.f, 6200.f, 40.f), Concrete, true, true);
+	AddBox(W(600.f, 400.f, 860.f), FVector(6000.f, 6200.f, 24.f), Night, false, true);
+	AddBox(W(600.f, 3500.f, 450.f), FVector(6000.f, 40.f, 820.f), Night, false, true);
+	AddBox(W(600.f, -2700.f, 450.f), FVector(6000.f, 40.f, 820.f), Night, false, true);
+	AddBox(W(3600.f, 400.f, 450.f), FVector(40.f, 6200.f, 820.f), Night, false, true);
+	AddBox(W(-2400.f, 400.f, 450.f), FVector(40.f, 6200.f, 820.f), Night, false, true);
 	AddSphere(W(-900.f, -900.f, 640.f), 70.f, FLinearColor(0.72f, 0.76f, 0.82f), false);
 
 	FRandomStream Stars(20261023);
 	for (int32 Index = 0; Index < 36; ++Index)
 	{
-		const float X = Stars.FRandRange(-2300.f, 2300.f);
-		const float Y = Stars.FRandRange(-1600.f, 3400.f);
-		if (X > -2250.f && X < 2360.f && Y > -1450.f && Y < 2750.f)
+		const float X = Stars.FRandRange(-2300.f, 3500.f);
+		const float Y = Stars.FRandRange(-2600.f, 3400.f);
+		if (X > -2250.f && X < 3520.f && Y > -2600.f && Y < 2750.f)
 		{
 			continue;
 		}
@@ -357,7 +358,10 @@ void ANightSchoolDirector::BuildStructure()
 	WallX(-2200.f, -1400.f, -600.f);
 	WallY(-1400.f, -2200.f, -1100.f);
 	WallY(-600.f, -2200.f, -1100.f);
-	WallY(-1400.f, -1100.f, 300.f);
+	WallY(-1400.f, -1100.f, -350.f);
+	WallY(-1400.f, -350.f, -275.f);
+	WallY(-1400.f, -125.f, 300.f);
+	LintelY(-1400.f, -200.f);
 	WallX(300.f, -1400.f, -600.f);
 	WallX(-350.f, -1400.f, -1075.f);
 	WallX(-350.f, -925.f, -600.f);
@@ -378,7 +382,9 @@ void ANightSchoolDirector::BuildStructure()
 	WallX(2000.f, 0.f, 325.f);
 	WallX(2000.f, 475.f, 800.f);
 	LintelX(2000.f, 400.f);
-	WallX(2320.f, 0.f, 800.f);
+	WallX(2320.f, 0.f, 325.f);
+	WallX(2320.f, 475.f, 800.f);
+	LintelX(2320.f, 400.f);
 	WallY(0.f, 1200.f, 2320.f);
 	WallY(800.f, 1200.f, 2320.f);
 	WallY(800.f, -1100.f, -775.f);
@@ -1027,6 +1033,11 @@ void ANightSchoolDirector::BuildRooms()
 	AddRoom(TEXT("Infirmary"), -250.f, 1050.f, 250.f, 1550.f, TEXT("校医室"));
 	AddRoom(TEXT("Light"), 350.f, 1480.f, 850.f, 1850.f, TEXT("光"));
 	AddRoom(TEXT("Closet"), -750.f, 1480.f, -350.f, 1850.f, TEXT("柜子"));
+	AddRoom(TEXT("South"), -430.f, -2500.f, 140.f, -1480.f, TEXT("南甬"));
+	AddRoom(TEXT("Tool"), -1050.f, -2500.f, -530.f, -1480.f, TEXT("工具间"));
+	AddRoom(TEXT("Porch"), 2380.f, 40.f, 2840.f, 760.f, TEXT("门廊"));
+	AddRoom(TEXT("Shed"), 2960.f, 40.f, 3460.f, 760.f, TEXT("车棚"));
+	AddRoom(TEXT("Read"), 2960.f, 880.f, 3460.f, 1520.f, TEXT("旧阅览"));
 }
 
 void ANightSchoolDirector::BuildSelfFigure()
@@ -1429,6 +1440,10 @@ FString ANightSchoolDirector::GetObjective() const
 	}
 	if (NoteCount() < 4)
 	{
+		if (!bPuzzle7)
+		{
+			return TEXT("第四张条子在小卖部。铁盒先要拨三个环：甲在前厅，乙在洗衣间，丙在南甬。人会在宿舍里走。八十秒。");
+		}
 		if (!bNoteShop && !bShopOpen)
 		{
 			return TEXT("江晚的条子在空位旁、走廊和储物柜。第四张在小卖部，宿舍铁盒里的硬币能把卷帘送上去。");
@@ -1481,6 +1496,10 @@ FString ANightSchoolDirector::GetObjective() const
 	}
 	if (!bExamGiven || !bOfficeOpen)
 	{
+		if (!bPuzzle8)
+		{
+			return TEXT("走廊还有一组环。甲在教室，乙在通话间，丙在小卖部。拨完，再把卷子交到办公室门口。");
+		}
 		return TEXT("空位、账本、章印都齐了。把试卷交到办公室门口。藏进抽屉不算。");
 	}
 	if (DraftCount() < 3)
@@ -1547,7 +1566,7 @@ FString ANightSchoolDirector::GetObjective() const
 	{
 		return TEXT("光里站着一个人。先看清他。然后拨开关，或者去西边的柜子。");
 	}
-	return TEXT("用手拨开关离开，或从柜子里面把门带上。三篇作文可以放在长凳上，不放也能走。");
+	return TEXT("用手拨开关离开，或从柜子里面把门带上。作文和东边的自习页都可以不放。南甬、工具间、车棚不改变这两扇门。");
 }
 
 int32 ANightSchoolDirector::GetChapterIndex() const
@@ -1651,6 +1670,7 @@ FString ANightSchoolDirector::GetItemsLine() const
 	if (bWearingEarplugs) Append(TEXT("耳塞戴着"));
 	else if (bHasEarplugs) Append(TEXT("耳塞在手里"));
 	if (bHasCloth) Append(TEXT("镜头布"));
+	if (bHasSideKey && !bSideOpen) Append(TEXT("门房钥匙"));
 	if (bHasSoda) Append(TEXT("汽水"));
 	if (bHasExam) Append(TEXT("试卷"));
 	if (bCoin) Append(TEXT("硬币"));
@@ -1679,8 +1699,17 @@ FString ANightSchoolDirector::GetThreadsLine() const
 		ChartCount(),
 		Items,
 		EssayCount());
-	const int32 Rings = (bPuzzle1 ? 1 : 0) + (bPuzzle2 ? 1 : 0) + (bPuzzle3 ? 1 : 0) + (bPuzzle4 ? 1 : 0) + (bPuzzle5 ? 1 : 0) + (bPuzzle6 ? 1 : 0);
-	Line += FString::Printf(TEXT("  环 %d/6"), Rings);
+	const int32 Rings = (bPuzzle1 ? 1 : 0) + (bPuzzle2 ? 1 : 0) + (bPuzzle3 ? 1 : 0) + (bPuzzle4 ? 1 : 0) + (bPuzzle5 ? 1 : 0) + (bPuzzle6 ? 1 : 0)
+		+ (bPuzzle7 ? 1 : 0) + (bPuzzle8 ? 1 : 0) + (bPuzzle9 ? 1 : 0) + (bPuzzle10 ? 1 : 0);
+	Line += FString::Printf(TEXT("  环 %d/10"), Rings);
+	if (!bStudyKept && StudyCount() > 0)
+	{
+		Line += FString::Printf(TEXT("  自习 %d/4"), StudyCount());
+	}
+	else if (bStudyKept)
+	{
+		Line += TEXT("  ·自习已放");
+	}
 	if (bCoin && !bCoinSpent)
 	{
 		Line += TEXT("  ·硬币");
@@ -1906,6 +1935,11 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 			ShowNote(TEXT("办公室"), NightSchoolStory::LockedOffice());
 			break;
 		}
+		if (!bPuzzle8)
+		{
+			ShowNote(TEXT("办公室"), TEXT("走廊那组环还没对上。甲在教室，乙在通话间，丙在小卖部。八十秒。人还在走廊里走。"));
+			break;
+		}
 		if (!bExamGiven)
 		{
 			bHasExam = false;
@@ -2046,6 +2080,11 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		ShowNote(NightSchoolStory::DutyTitleC(), NightSchoolStory::DutyBodyC());
 		break;
 	case ENightPropId::Coin:
+		if (!bPuzzle7)
+		{
+			ShowNote(TEXT("铁盒"), TEXT("三个环还没对上。甲写在前厅，乙在洗衣间，丙在南甬。拨的时候宿舍里会有人走。八十秒。"));
+			break;
+		}
 		bCoin = true;
 		Prop->Consume();
 		ShowNote(NightSchoolStory::CoinTitle(), NightSchoolStory::CoinBody());
@@ -2404,6 +2443,84 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 	case ENightPropId::SelfFigure:
 		bSawSelf = true;
 		ShowNote(NightSchoolStory::SelfTitle(), NightSchoolStory::SelfBody());
+		break;
+	case ENightPropId::SideKey:
+		bHasSideKey = true;
+		Prop->Consume();
+		ShowNote(TEXT("门房钥匙"), TEXT("后仓东墙有一扇不在章印上的门。钥匙只开那一扇。它不是新的一章，也不是第三扇门。"));
+		break;
+	case ENightPropId::SouthDoor:
+		Prop->OpenDoor();
+		ShowStatus(TEXT("南甬开了。这里没有章，走到头是工具间。"), 3.6f);
+		break;
+	case ENightPropId::ToolDoor:
+		Prop->OpenDoor();
+		break;
+	case ENightPropId::SideDoor:
+		if (!bHasSideKey && !bSideOpen)
+		{
+			ShowNote(TEXT("东门"), TEXT("锁是好的。钥匙在南甬尽头，如果还没捡。这扇门不认章印。"));
+			break;
+		}
+		bSideOpen = true;
+		Prop->OpenDoor();
+		ShowStatus(TEXT("门廊黑着。车棚在更东边。旧阅览要等校医室开了再拨。"), 4.2f);
+		break;
+	case ENightPropId::ShedDoor:
+		bShedOpen = true;
+		Prop->OpenDoor();
+		break;
+	case ENightPropId::ReadDoor:
+		if (!bPuzzle9)
+		{
+			ShowNote(TEXT("旧阅览"), TEXT("车棚的环还没对上。甲在宿舍，乙在长榜，丙在校医室。数字不在这扇门上。"));
+			break;
+		}
+		TryOpenReadingRoom();
+		break;
+	case ENightPropId::StudyA:
+		bStudyA = true;
+		ShowNote(TEXT("夜自习"), TEXT("名册上有许知夏。旁边的格子是空的。没有人把名字写进来，也没有人被写成必须坐在这里。"));
+		break;
+	case ENightPropId::StudyB:
+		bStudyB = true;
+		ShowNote(TEXT("车棚"), TEXT("去年的锁还挂着。林小满已经毕业。这把锁打不开一条把她接回来的路。"));
+		break;
+	case ENightPropId::StudyC:
+		bStudyC = true;
+		ShowNote(TEXT("值班表"), TEXT("周先生的钟点停在退休前。表上没有第三扇门。两扇还是那两扇。"));
+		break;
+	case ENightPropId::StudyD:
+		bStudyD = true;
+		ShowNote(TEXT("宿管"), TEXT("老吴看见宿舍那只红点还亮着。他没有去盖。布只有你手里那一块，如果已经盖上，也不是他盖的。"));
+		break;
+	case ENightPropId::StudyBench:
+		if (StudyCount() < 4)
+		{
+			ShowNote(TEXT("阅览桌"), TEXT("四页夜自习还没齐。南甬、车棚、这间屋、储物柜。放齐了也不改变两扇门。"));
+			break;
+		}
+		bStudyKept = true;
+		ShowNote(TEXT("阅览桌"), TEXT("四页都在桌上。它们留在这里。开关不认这些纸，柜子也不认。"));
+		break;
+	case ENightPropId::ToolCabinet:
+		if (!bPuzzle10)
+		{
+			ShowNote(TEXT("工具柜"), TEXT("三个环还没对上。数字写在南甬和这间屋的墙上。八十秒。"));
+			break;
+		}
+		if (bToolCell)
+		{
+			ShowStatus(TEXT("柜子空了。那节电池已经在那点光里。"), 2.8f);
+			break;
+		}
+		bToolCell = true;
+		if (ANightSchoolCharacter* Current = Player())
+		{
+			Current->RefillBattery(100.f);
+		}
+		Prop->Consume();
+		ShowStatus(TEXT("工具柜里有一节电池。它把那点用来后退的光照回来。不是离开这间屋的光。"), 4.2f);
 		break;
 	case ENightPropId::InkPad:
 		UseInkPad(Prop);
