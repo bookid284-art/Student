@@ -1,4 +1,8 @@
 #include "NightSchool/NightSchoolDirector.h"
+#include "Sound/SoundGroups.h"
+#include "Components/ExponentialHeightFogComponent.h"
+#include "Components/SkyLightComponent.h"
+#include "Components/LightComponent.h"
 
 #include "Animation/AnimationAsset.h"
 #include "Camera/PlayerCameraManager.h"
@@ -731,8 +735,8 @@ void ANightSchoolDirector::BuildAudio()
 	DroneWave = NewObject<USoundWaveProcedural>(this);
 	DroneWave->SetSampleRate(22050);
 	DroneWave->NumChannels = 1;
-	DroneWave->Duration = 100000.f;
-	DroneWave->SoundGroup = SOUNDGROUP_Ambient;
+	DroneWave->Duration = INDEFINITELY_LOOPING_DURATION;
+	DroneWave->SoundGroup = SOUNDGROUP_Effects;
 	DroneWave->bLooping = false;
 
 	DroneAudio = NewObject<UAudioComponent>(this);
@@ -741,8 +745,8 @@ void ANightSchoolDirector::BuildAudio()
 	DroneAudio->RegisterComponent();
 	DroneAudio->SetSound(DroneWave);
 	DroneAudio->SetVolumeMultiplier(0.42f);
-	DroneAudio->Play();
 	QueueDrone(0.4f);
+	DroneAudio->Play();
 }
 
 void ANightSchoolDirector::QueueDrone(float Seconds)
@@ -2535,3 +2539,5 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		break;
 	}
 }
+
+

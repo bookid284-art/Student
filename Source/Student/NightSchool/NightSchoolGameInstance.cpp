@@ -2,6 +2,7 @@
 
 #include "Camera/PlayerCameraManager.h"
 #include "Components/LightComponent.h"
+#include "Components/SkyLightComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
 #include "Engine/Light.h"
@@ -162,3 +163,4 @@ void UNightSchoolGameInstance::SuppressTemplateWorld(UWorld* World)
 		Actor->SetActorEnableCollision(false);
 	}
 }
+

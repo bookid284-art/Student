@@ -233,7 +233,7 @@ void ANightSchoolCharacter::ApplyResume(const FVector& Location, const FRotator&
 	bViewReady = false;
 	UCharacterMovementComponent* Move = GetCharacterMovement();
 	UCapsuleComponent* Capsule = GetCapsuleComponent();
-	const float CrouchedHalf = Move ? Move->CrouchedHalfHeight : 60.f;
+	const float CrouchedHalf = Move ? Move->GetCrouchedHalfHeight() : 60.f;
 	float StandingHalf = 88.f;
 	if (const ANightSchoolCharacter* Defaults = GetDefault<ANightSchoolCharacter>())
 	{
@@ -309,14 +309,14 @@ void ANightSchoolCharacter::BuildBody()
 	const FLinearColor Pack(0.16f, 0.17f, 0.18f);
 	const FLinearColor Book(0.55f, 0.16f, 0.12f);
 
-	auto AddPart = [this](UStaticMesh* Mesh, const FVector& FromFeet, const FVector& Scale, const FLinearColor& Color, bool bHead)
+	auto AddPart = [this](UStaticMesh* PartMesh, const FVector& FromFeet, const FVector& Scale, const FLinearColor& Color, bool bHead)
 	{
-		if (!Mesh || !BodyRoot)
+		if (!PartMesh || !BodyRoot)
 		{
 			return;
 		}
 		UStaticMeshComponent* Part = NewObject<UStaticMeshComponent>(this);
-		Part->SetStaticMesh(Mesh);
+		Part->SetStaticMesh(PartMesh);
 		Part->SetupAttachment(BodyRoot);
 		Part->SetRelativeLocation(FromFeet);
 		Part->SetRelativeScale3D(Scale);
@@ -761,3 +761,4 @@ void ANightSchoolCharacter::DetachHud()
 	HudWidget.Reset();
 	bHudAttached = false;
 }
+
