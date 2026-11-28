@@ -3,10 +3,13 @@
 #include "Animation/AnimationAsset.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Engine/SkeletalMesh.h"
+#include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "NightSchool/NightSchoolArt.h"
 #include "NightSchool/NightSchoolCharacter.h"
 #include "NightSchool/NightSchoolDirector.h"
@@ -28,6 +31,7 @@ ANightSchoolApparition::ANightSchoolApparition()
 	GetCapsuleComponent()->SetGenerateOverlapEvents(true);
 
 	bUseControllerRotationYaw = false;
+	GetCharacterMovement()->bRunPhysicsWithNoController = true;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 280.f, 0.f);
 	GetCharacterMovement()->MaxWalkSpeed = 90.f;
@@ -46,6 +50,7 @@ void ANightSchoolApparition::BeginPlay()
 	}
 	WalkAnim = LoadObject<UAnimationAsset>(nullptr, TEXT("/Game/Characters/Mannequins/Anims/Unarmed/Walk/MF_Unarmed_Walk_Fwd.MF_Unarmed_Walk_Fwd"));
 	IdleAnim = LoadObject<UAnimationAsset>(nullptr, TEXT("/Game/Characters/Mannequins/Anims/Unarmed/MM_Idle.MM_Idle"));
+	ChaseAnim = LoadObject<UAnimationAsset>(nullptr, TEXT("/Game/Characters/Mannequins/Anims/Unarmed/Jog/MF_Unarmed_Jog_Fwd.MF_Unarmed_Jog_Fwd"));
 
 	if (Body)
 	{
@@ -61,10 +66,7 @@ void ANightSchoolApparition::BeginPlay()
 				GetMesh()->SetMaterial(Index, Dark);
 			}
 		}
-		if (IdleAnim)
-		{
-			GetMesh()->PlayAnimation(IdleAnim, true);
-		}
+		UpdateAnimation();
 	}
 	else if (UStaticMeshComponent* Fallback = NewObject<UStaticMeshComponent>(this))
 	{
@@ -126,7 +128,7 @@ bool ANightSchoolApparition::CanSeePlayer(ANightSchoolCharacter* Player) const
 	}
 	const FVector MyEyes = GetActorLocation() + FVector(0.f, 0.f, 50.f);
 	const FVector Target = Player->GetActorLocation();
-	if (!Room.IsInsideXY(Target))
+	if (!Room.IsInside(Target))
 	{
 		return false;
 	}
@@ -158,7 +160,11 @@ bool ANightSchoolApparition::CanSeePlayer(ANightSchoolCharacter* Player) const
 void ANightSchoolApparition::NotifyActorBeginOverlap(AActor* OtherActor)
 {
 	Super::NotifyActorBeginOverlap(OtherActor);
-	ANightSchoolCharacter* Player = Cast<ANightSchoolCharacter>(OtherActor);
+	TryCatchPlayer(Cast<ANightSchoolCharacter>(OtherActor));
+}
+
+void ANightSchoolApparition::TryCatchPlayer(ANightSchoolCharacter* Player)
+{
 	ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld());
 	const bool bPuzzle = Director && Director->IsPuzzleActive();
 	if (!Player || Player->IsEnded() || Player->IsPreviewing() || HitCooldown > 0.f || StunRemaining > 0.f)
@@ -178,6 +184,9 @@ void ANightSchoolApparition::NotifyActorBeginOverlap(AActor* OtherActor)
 		Director->OnCaughtByApparition();
 	}
 	HitCooldown = 2.8f;
+	bChasing = false;
+	LoseSightTime = 0.f;
+	BlockedTime = 0.f;
 	if (Waypoints.Num() > 0)
 	{
 		int32 Best = 0;
@@ -202,6 +211,62 @@ void ANightSchoolApparition::NotifyActorBeginOverlap(AActor* OtherActor)
 	}
 }
 
+FVector ANightSchoolApparition::FindMoveDirection(const FVector& Goal, const AActor* Target) const
+{
+	const FVector Here = GetActorLocation();
+	const FVector Toward = (Goal - Here).GetSafeNormal2D();
+	const float Reach = FMath::Min(70.f, FVector::Dist2D(Goal, Here));
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(ApparitionMove), false, this);
+	if (Target)
+	{
+		Params.AddIgnoredActor(Target);
+	}
+	// Leave clearance above the floor so a grounded capsule can detect furniture and walls ahead.
+	const UCapsuleComponent* Capsule = GetCapsuleComponent();
+	const FCollisionShape Shape = FCollisionShape::MakeCapsule(Capsule->GetScaledCapsuleRadius() - 1.f,
+		Capsule->GetScaledCapsuleHalfHeight() - 3.f);
+	FVector BestDirection = FVector::ZeroVector;
+	float BestScore = 0.f;
+	for (float Angle : {0.f, -40.f, 40.f, -72.f, 72.f, -105.f, 105.f})
+	{
+		const FVector Direction = Toward.RotateAngleAxis(Angle, FVector::UpVector);
+		const FVector End = Here + Direction * Reach;
+		if (!Room.IsInsideXY(End))
+		{
+			continue;
+		}
+		FHitResult Hit;
+		const bool bBlocked = GetWorld()->SweepSingleByChannel(Hit, Here, End, FQuat::Identity, ECC_Pawn, Shape, Params);
+		if (!bBlocked && Angle == 0.f)
+		{
+			return Direction;
+		}
+		const float Fraction = bBlocked ? Hit.Time : 1.f;
+		const float Score = Fraction * (1.f - FMath::Abs(Angle) / 150.f);
+		if (Score > BestScore && Reach * Fraction >= 8.f)
+		{
+			BestScore = Score;
+			BestDirection = Direction;
+		}
+	}
+	return BestDirection;
+}
+
+void ANightSchoolApparition::UpdateAnimation()
+{
+	const float Speed = GetVelocity().Size2D();
+	UAnimationAsset* Next = IdleAnim;
+	if (Speed > 8.f)
+	{
+		Next = bChasing && Speed > 121.f && ChaseAnim ? ChaseAnim.Get() : WalkAnim.Get();
+	}
+	if (Next && Next != PlayingAnim)
+	{
+		GetMesh()->PlayAnimation(Next, true);
+		PlayingAnim = Next;
+	}
+}
+
 void ANightSchoolApparition::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -212,11 +277,14 @@ void ANightSchoolApparition::Tick(float DeltaSeconds)
 	const bool bPuzzle = Director && Director->IsPuzzleActive();
 	if (Director && (Director->IsEnding() || Director->IsPreviewing() || (Director->IsNoteOpen() && !bPuzzle)))
 	{
+		ConsumeMovementInputVector();
+		GetCharacterMovement()->StopMovementImmediately();
+		UpdateAnimation();
 		return;
 	}
 
 	ANightSchoolCharacter* Player = FindPlayer();
-	const bool bSees = CanSeePlayer(Player);
+	const bool bSees = HitCooldown <= 0.f && CanSeePlayer(Player);
 	if (bSees)
 	{
 		bChasing = true;
@@ -231,10 +299,23 @@ void ANightSchoolApparition::Tick(float DeltaSeconds)
 		}
 	}
 
-	if (Player && Player->IsFlashlightHitting(GetActorLocation() + FVector(0.f, 0.f, 60.f)))
+	const FVector Head = GetActorLocation() + FVector(0.f, 0.f, 60.f);
+	if (Player && Player->IsFlashlightHitting(Head))
 	{
-		StunRemaining = 1.15f;
-		bChasing = false;
+		FVector Eyes;
+		FRotator View;
+		Player->GetActorEyesViewPoint(Eyes, View);
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(ApparitionFlashlight), false, Player);
+		Params.AddIgnoredActor(this);
+		if (!GetWorld()->LineTraceTestByChannel(Eyes, Head, ECC_Visibility, Params))
+		{
+			StunRemaining = 1.15f;
+			bChasing = false;
+		}
+	}
+	if (Player && IsOverlappingActor(Player))
+	{
+		TryCatchPlayer(Player);
 	}
 
 	FVector LurePoint = FVector::ZeroVector;
@@ -255,15 +336,16 @@ void ANightSchoolApparition::Tick(float DeltaSeconds)
 	else if (bChasing && Player)
 	{
 		Goal = Player->GetActorLocation();
-		GetCharacterMovement()->MaxWalkSpeed = 165.f;
+		GetCharacterMovement()->MaxWalkSpeed = 195.f;
 	}
 	else if (Waypoints.Num() > 0)
 	{
 		Goal = Waypoints[WaypointIndex];
-		if (FVector::Dist2D(GetActorLocation(), Goal) < 90.f)
+		if (FVector::Dist2D(GetActorLocation(), Goal) < 40.f || BlockedTime > 1.2f)
 		{
 			WaypointIndex = (WaypointIndex + 1) % Waypoints.Num();
 			Goal = Waypoints[WaypointIndex];
+			BlockedTime = 0.f;
 		}
 		GetCharacterMovement()->MaxWalkSpeed = 85.f;
 	}
@@ -275,23 +357,14 @@ void ANightSchoolApparition::Tick(float DeltaSeconds)
 		Goal.Y = FMath::Clamp(Goal.Y, Room.Min.Y + 80.f, Room.Max.Y - 80.f);
 	}
 
-	const FVector Direction = (Goal - GetActorLocation()).GetSafeNormal2D();
-	if (!Direction.IsNearlyZero())
+	if (FVector::DistSquared2D(Goal, GetActorLocation()) > FMath::Square(12.f))
 	{
-		AddMovementInput(Direction, 1.f);
+		AddMovementInput(FindMoveDirection(Goal, Player));
+		BlockedTime = GetVelocity().SizeSquared2D() < FMath::Square(12.f) ? BlockedTime + DeltaSeconds : 0.f;
 	}
-	if (GetVelocity().SizeSquared() < 30.f)
+	else
 	{
-		AddMovementInput(GetActorRightVector(), 1.f);
+		BlockedTime = 0.f;
 	}
-
-	const bool bMoving = GetVelocity().SizeSquared() > 80.f;
-	if (bMoving != bWasMoving)
-	{
-		bWasMoving = bMoving;
-		if (UAnimationAsset* Next = bMoving ? WalkAnim.Get() : IdleAnim.Get())
-		{
-			GetMesh()->PlayAnimation(Next, true);
-		}
-	}
+	UpdateAnimation();
 }

@@ -1,8 +1,10 @@
 #include "NightSchool/NightSchoolDirector.h"
 
+#include "Components/PrimitiveComponent.h"
 #include "GameFramework/Character.h"
 #include "NightSchool/NightSchoolApparition.h"
 #include "NightSchool/NightSchoolCharacter.h"
+#include "NightSchool/NightSchoolLayout.h"
 #include "NightSchool/NightSchoolProp.h"
 
 namespace
@@ -20,6 +22,7 @@ namespace
 		{1, 5, 7},
 	};
 	const float PuzzleLimit = 80.f;
+	const TCHAR* Knobs[] = {TEXT("甲"), TEXT("乙"), TEXT("丙")};
 
 	bool ParsePuzzleMark(const FString& Mark, int32& OutIndex, int32* OutSlot)
 	{
@@ -141,7 +144,7 @@ const TCHAR* ANightSchoolDirector::PuzzleLockedText(int32 Index) const
 	case 5: return TEXT("病历和托盘还没做完。药柜先别转。");
 	case 6: return TEXT("先看过那只手机。铁盒的环先别转。");
 	case 7: return TEXT("第三章的章还没盖，或者卷子还没拿。走廊的环先别转。");
-	case 8: return TEXT("校医室还没开。车棚的环先别转。甲在宿舍，乙在长榜，丙在校医室。");
+	case 8: return TEXT("校医室还没开。车棚的环先别转。甲在二楼 203，乙在三楼长榜，丙在一楼校医室。");
 	default: return TEXT("现在还转不了。");
 	}
 }
@@ -425,7 +428,12 @@ void ANightSchoolDirector::RestoreCheckpoint()
 		}
 		if (Prop->GetPropId() == ENightPropId::Dial)
 		{
-			Prop->SetPrompt(FText::FromString(TEXT("转动这环")));
+			int32 Puzzle = 0;
+			int32 Slot = 0;
+			if (ParsePuzzleMark(Prop->GetMarker().ToString(), Puzzle, &Slot))
+			{
+				Prop->SetPrompt(FText::FromString(FString::Printf(TEXT("转动%s环"), Knobs[Slot])));
+			}
 			continue;
 		}
 		if (IsSharedProp(Prop->GetPropId()))
@@ -506,7 +514,7 @@ void ANightSchoolDirector::EnsureOpeningCheckpoint()
 	}
 	if (ANightSchoolCharacter* Current = Player())
 	{
-		CaptureCheckpoint(TEXT("前厅"), Current->GetActorLocation());
+		CaptureCheckpoint(TEXT("宿舍楼外"), Current->GetActorLocation());
 	}
 }
 
@@ -551,7 +559,7 @@ void ANightSchoolDirector::FinishPuzzle(int32 Index)
 	if (Index == 8)
 	{
 		TryOpenReadingRoom();
-		ShowStatus(TEXT("三环对上了。旧阅览的门开了。这不是第三扇门。"), 4.2f);
+		ShowStatus(TEXT("三环对上了。回宿舍楼，上三楼去旧阅览室。"), 5.5f);
 		return;
 	}
 	ShowStatus(TEXT("三环对上了。这一轮的追赶停了。"), 4.2f);
@@ -608,7 +616,7 @@ void ANightSchoolDirector::UseDial(ANightSchoolProp* Prop)
 	}
 	BeginPuzzle(Index);
 	Dials[Index][Slot] = (Dials[Index][Slot] + 1) % 10;
-	Prop->SetPrompt(FText::FromString(FString::Printf(TEXT("这环现在是 %d"), Dials[Index][Slot])));
+	Prop->SetPrompt(FText::FromString(FString::Printf(TEXT("%s环  %d"), Knobs[Slot], Dials[Index][Slot])));
 }
 
 void ANightSchoolDirector::UseDialConfirm(ANightSchoolProp* Prop)
@@ -698,11 +706,12 @@ void ANightSchoolDirector::SpawnPuzzleChaser(int32 Index)
 	}
 	else if (Index == 6)
 	{
-		Room = FBox(W(-1020.f, 60.f, -20.f), W(-360.f, 740.f, 420.f));
-		Points.Add(W(-800.f, 300.f, 128.f));
-		Points.Add(W(-500.f, 500.f, 128.f));
-		Points.Add(W(-900.f, 550.f, 128.f));
-		Points.Add(W(-480.f, 250.f, 128.f));
+		using NightSchool::Dorm;
+		Room = FBox(Dorm(-1020.f, 60.f, 40.f), Dorm(-360.f, 740.f, 330.f));
+		Points.Add(Dorm(-800.f, 300.f, 128.f));
+		Points.Add(Dorm(-500.f, 500.f, 128.f));
+		Points.Add(Dorm(-900.f, 495.f, 128.f));
+		Points.Add(Dorm(-480.f, 250.f, 128.f));
 		Glyph = TEXT("盒");
 	}
 	else if (Index == 9)
@@ -776,32 +785,78 @@ void ANightSchoolDirector::RebuildGhosts(bool bHall, bool bShop, bool bNotice, b
 
 void ANightSchoolDirector::BuildCheckpoints()
 {
+	using Placement = FVector (*)(float, float, float);
+	using NightSchool::Annex;
+	using NightSchool::Dorm;
+	using NightSchool::Reading;
 	const FLinearColor Ink(0.42f, 0.06f, 0.05f);
 	const FLinearColor Brass(0.32f, 0.26f, 0.14f);
-	auto Pad = [this, Ink](float X, float Y, const TCHAR* Room)
+	const FLinearColor Base(.052f, .059f, .061f);
+	auto At = [this](Placement Place, float X, float Y, float Z)
 	{
-		if (ANightSchoolProp* Prop = SpawnProp(ENightPropId::InkPad, W(X, Y, 96.f), FVector(14.f, 14.f, 10.f), Ink, FText::FromString(TEXT("把进度印在这里")), FVector::ZeroVector, 0.f, TEXT("印台")))
+		return Place ? Place(X, Y, Z) : W(X, Y, Z);
+	};
+	auto Pedestal = [this, &At, Base](Placement Place, float X, float Y, float Top, const FVector2D& Surface)
+	{
+		const float Height = Top - NightSchool::FloorTop;
+		AddBox(At(Place, X, Y, NightSchool::FloorTop + Height * .5f), FVector(22.f, 22.f, Height), Base, true, true);
+		AddBox(At(Place, X, Y, Top - 2.5f), FVector(Surface.X, Surface.Y, 5.f), Base * 1.4f, true, true);
+	};
+	auto Pad = [this, &At, &Pedestal, Ink](float X, float Y, const TCHAR* Room, Placement Place = nullptr, bool bOnCounter = false)
+	{
+		const float Top = bOnCounter ? 88.f : 86.f;
+		if (!bOnCounter)
+		{
+			Pedestal(Place, X, Y, Top, FVector2D(32.f, 32.f));
+		}
+		if (ANightSchoolProp* Prop = SpawnProp(ENightPropId::InkPad, At(Place, X, Y, Top + 4.f),
+			FVector(14.f, 14.f, 4.f), Ink, FText::FromString(TEXT("把进度印在这里")), FVector::ZeroVector, 0.f, FString()))
 		{
 			Prop->SetMarker(FName(Room));
 		}
 	};
-	auto Wheel = [this, Brass](float X, float Y, const TCHAR* Mark, const TCHAR* Label)
+	auto Wheel = [this, &At, &Pedestal, Brass](float X, float Y, const TCHAR* Mark, const TCHAR* Label, Placement Place = nullptr)
 	{
-		if (ANightSchoolProp* Prop = SpawnProp(ENightPropId::Dial, W(X, Y, 112.f), FVector(10.f, 10.f, 16.f), Brass, FText::FromString(TEXT("转动这环")), FVector::ZeroVector, 0.f, Label))
+		Pedestal(Place, X, Y, 96.f, FVector2D(26.f, 26.f));
+		AddLabel(At(Place, X - 12.f, Y, 83.f), 180.f, Label, 12.f, FColor(195, 187, 162));
+		if (ANightSchoolProp* Prop = SpawnProp(ENightPropId::Dial, At(Place, X, Y, 112.f), FVector(10.f, 10.f, 16.f), Brass,
+			FText::FromString(FString::Printf(TEXT("转动%s环"), Label)), FVector::ZeroVector, 0.f, FString()))
 		{
 			Prop->SetMarker(FName(Mark));
 		}
 	};
-	auto Plate = [this](float X, float Y, const TCHAR* Mark)
+	auto Plate = [this, &At, &Pedestal](float X, float Y, const TCHAR* Mark, Placement Place = nullptr)
 	{
-		if (ANightSchoolProp* Prop = SpawnProp(ENightPropId::DialConfirm, W(X, Y, 100.f), FVector(16.f, 12.f, 8.f), FLinearColor(0.18f, 0.16f, 0.13f), FText::FromString(TEXT("按下确认")), FVector::ZeroVector, 0.f, TEXT("确认")))
+		Pedestal(Place, X, Y, 92.f, FVector2D(38.f, 30.f));
+		if (ANightSchoolProp* Prop = SpawnProp(ENightPropId::DialConfirm, At(Place, X, Y, 100.f), FVector(16.f, 12.f, 8.f), FLinearColor(0.18f, 0.16f, 0.13f), FText::FromString(TEXT("按下确认")), FVector::ZeroVector, 0.f, TEXT("确认")))
 		{
 			Prop->SetMarker(FName(Mark));
+		}
+	};
+	auto Clue = [this, &At](float X, float Y, float Yaw, int32 Puzzle, int32 Slot = INDEX_NONE, Placement Place = nullptr)
+	{
+		const int32* Code = PuzzleCode[Puzzle - 1];
+		const TCHAR* Indices[] = {TEXT("甲"), TEXT("乙"), TEXT("丙")};
+		const FString Note = Slot == INDEX_NONE
+			? FString::Printf(TEXT("甲  %d       乙  %d       丙  %d"), Code[0], Code[1], Code[2])
+			: FString::Printf(TEXT("%s  %d"), Indices[Slot], Code[Slot]);
+		ANightSchoolProp* Sign = SpawnProp(ENightPropId::DialClue, At(Place, X, Y, 168.f), FVector(3.f, 24.f, 13.f),
+			FLinearColor(.42f, .36f, .24f), FText::FromString(TEXT("查看数字线索")), FVector::ZeroVector, 0.f, FString());
+		if (Sign)
+		{
+			Sign->SetActorRotation(FRotator(0.f, Yaw, 0.f));
+			Sign->SetMarker(FName(*Note));
+			if (UPrimitiveComponent* Hit = Cast<UPrimitiveComponent>(Sign->GetRootComponent()))
+			{
+				Hit->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+				Hit->SetCollisionResponseToAllChannels(ECR_Ignore);
+				Hit->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+			}
 		}
 	};
 
-	Pad(-80.f, -450.f, TEXT("前厅"));
-	Pad(-600.f, 480.f, TEXT("宿舍"));
+	Pad(-80.f, -548.f, TEXT("一楼前厅"), nullptr, true);
+	Pad(-600.f, 480.f, TEXT("二楼 203"), Dorm);
 	Pad(-500.f, -1100.f, TEXT("值班室"));
 	Pad(120.f, -900.f, TEXT("洗衣间"));
 	Pad(-2000.f, -1000.f, TEXT("通话间"));
@@ -814,7 +869,7 @@ void ANightSchoolDirector::BuildCheckpoints()
 	Pad(1300.f, 900.f, TEXT("年级组"));
 	Pad(1850.f, 980.f, TEXT("微机室"));
 	Pad(1200.f, 1550.f, TEXT("北廊"));
-	Pad(1100.f, 2100.f, TEXT("长榜"));
+	Pad(1100.f, 2100.f, TEXT("三楼长榜"), Annex);
 	Pad(0.f, 1450.f, TEXT("校医室"));
 	Pad(400.f, 1550.f, TEXT("光"));
 	Pad(-650.f, 1550.f, TEXT("柜子"));
@@ -823,74 +878,74 @@ void ANightSchoolDirector::BuildCheckpoints()
 	Wheel(-1500.f, -1200.f, TEXT("P1B"), TEXT("乙"));
 	Wheel(-2000.f, -1100.f, TEXT("P1C"), TEXT("丙"));
 	Plate(-1750.f, -1150.f, TEXT("P1OK"));
-	AddLabel(W(-1700.f, -1000.f, 168.f), 90.f, TEXT("6   1   4"), 18.f, FColor(220, 190, 150));
+	Clue(-1700.f, -1383.f, 90.f, 1);
 
 	Wheel(550.f, 650.f, TEXT("P2A"), TEXT("甲"));
 	Wheel(560.f, 100.f, TEXT("P2B"), TEXT("乙"));
 	Wheel(1100.f, 480.f, TEXT("P2C"), TEXT("丙"));
 	Plate(760.f, 320.f, TEXT("P2OK"));
-	AddLabel(W(760.f, 360.f, 168.f), -90.f, TEXT("3   1   2"), 18.f, FColor(220, 190, 150));
+	Clue(760.f, 17.f, -90.f, 2);
 
 	Wheel(1450.f, 650.f, TEXT("P3A"), TEXT("甲"));
 	Wheel(1850.f, 180.f, TEXT("P3B"), TEXT("乙"));
 	Wheel(1900.f, 650.f, TEXT("P3C"), TEXT("丙"));
 	Plate(1550.f, 450.f, TEXT("P3OK"));
-	AddLabel(W(1600.f, 300.f, 168.f), 180.f, TEXT("4   0   8"), 18.f, FColor(220, 190, 150));
+	Clue(1600.f, 17.f, -90.f, 3);
 
 	Wheel(420.f, 1250.f, TEXT("P4A"), TEXT("甲"));
 	Wheel(800.f, 1000.f, TEXT("P4B"), TEXT("乙"));
 	Wheel(820.f, 1180.f, TEXT("P4C"), TEXT("丙"));
 	Plate(600.f, 1100.f, TEXT("P4OK"));
-	AddLabel(W(620.f, 1080.f, 168.f), -90.f, TEXT("7   2   5"), 18.f, FColor(220, 190, 150));
+	Clue(735.f, 1383.f, -90.f, 4);
 
-	Wheel(1300.f, 2400.f, TEXT("P5A"), TEXT("甲"));
-	Wheel(1800.f, 2100.f, TEXT("P5B"), TEXT("乙"));
-	Wheel(2000.f, 2450.f, TEXT("P5C"), TEXT("丙"));
-	Plate(1450.f, 2350.f, TEXT("P5OK"));
-	AddLabel(W(1600.f, 2200.f, 168.f), -90.f, TEXT("5   8   1"), 18.f, FColor(220, 190, 150));
+	Wheel(1300.f, 2400.f, TEXT("P5A"), TEXT("甲"), Annex);
+	Wheel(1800.f, 2100.f, TEXT("P5B"), TEXT("乙"), Annex);
+	Wheel(2000.f, 2450.f, TEXT("P5C"), TEXT("丙"), Annex);
+	Plate(1450.f, 2350.f, TEXT("P5OK"), Annex);
+	Clue(2182.f, 2190.f, 0.f, 5, INDEX_NONE, Annex);
 
 	Wheel(-150.f, 1400.f, TEXT("P6A"), TEXT("甲"));
 	Wheel(150.f, 1450.f, TEXT("P6B"), TEXT("乙"));
 	Wheel(0.f, 1120.f, TEXT("P6C"), TEXT("丙"));
 	Plate(-80.f, 1250.f, TEXT("P6OK"));
-	AddLabel(W(-40.f, 1220.f, 168.f), 0.f, TEXT("1   7   0"), 18.f, FColor(220, 190, 150));
+	Clue(-283.f, 1220.f, 0.f, 6);
 
-	Wheel(-900.f, 400.f, TEXT("P7A"), TEXT("甲"));
-	Wheel(-450.f, 180.f, TEXT("P7B"), TEXT("乙"));
-	Wheel(-420.f, 620.f, TEXT("P7C"), TEXT("丙"));
-	Plate(-640.f, 180.f, TEXT("P7OK"));
-	AddLabel(W(180.f, -200.f, 168.f), 90.f, TEXT("甲  2"), 18.f, FColor(220, 190, 150));
-	AddLabel(W(-80.f, -780.f, 168.f), 0.f, TEXT("乙  6"), 18.f, FColor(220, 190, 150));
-	AddLabel(W(-300.f, -2100.f, 168.f), 90.f, TEXT("丙  9"), 18.f, FColor(220, 190, 150));
+	Wheel(-900.f, 400.f, TEXT("P7A"), TEXT("甲"), Dorm);
+	Wheel(-450.f, 180.f, TEXT("P7B"), TEXT("乙"), Dorm);
+	Wheel(-420.f, 620.f, TEXT("P7C"), TEXT("丙"), Dorm);
+	Plate(-640.f, 180.f, TEXT("P7OK"), Dorm);
+	Clue(180.f, -17.f, 90.f, 7, 0);
+	Clue(-333.f, -780.f, 0.f, 7, 1);
+	Clue(-463.f, -2100.f, 0.f, 7, 2);
 
 	Wheel(-80.f, 250.f, TEXT("P8A"), TEXT("甲"));
 	Wheel(80.f, 500.f, TEXT("P8B"), TEXT("乙"));
 	Wheel(-40.f, 780.f, TEXT("P8C"), TEXT("丙"));
 	Plate(40.f, 360.f, TEXT("P8OK"));
-	AddLabel(W(450.f, 700.f, 168.f), 180.f, TEXT("甲  8"), 18.f, FColor(220, 190, 150));
-	AddLabel(W(-1300.f, -800.f, 168.f), 0.f, TEXT("乙  4"), 18.f, FColor(220, 190, 150));
-	AddLabel(W(1350.f, 550.f, 168.f), 180.f, TEXT("丙  0"), 18.f, FColor(220, 190, 150));
+	Clue(450.f, 783.f, 90.f, 8, 0);
+	Clue(-1300.f, -617.f, 90.f, 8, 1);
+	Clue(1217.f, 550.f, 0.f, 8, 2);
 
 	Wheel(3100.f, 200.f, TEXT("P9A"), TEXT("甲"));
 	Wheel(3350.f, 600.f, TEXT("P9B"), TEXT("乙"));
 	Wheel(3400.f, 180.f, TEXT("P9C"), TEXT("丙"));
 	Plate(3180.f, 450.f, TEXT("P9OK"));
-	AddLabel(W(-980.f, 500.f, 168.f), 0.f, TEXT("甲  9"), 18.f, FColor(220, 190, 150));
-	AddLabel(W(1050.f, 2100.f, 168.f), -90.f, TEXT("乙  3"), 18.f, FColor(220, 190, 150));
-	AddLabel(W(220.f, 1200.f, 168.f), 180.f, TEXT("丙  5"), 18.f, FColor(220, 190, 150));
-	AddLabel(W(3200.f, 500.f, 168.f), 180.f, TEXT("甲宿舍  乙长榜  丙校医室"), 14.f, FColor(220, 190, 150));
+	Clue(-1085.f, 515.f, 0.f, 9, 0, Dorm);
+	Clue(918.f, 2190.f, 0.f, 9, 1, Annex);
+	Clue(283.f, 1200.f, 0.f, 9, 2);
+	AddLabel(W(3200.f, 782.f, 164.f), -90.f, TEXT("甲 二楼203   乙 三楼长榜   丙 一楼校医室"), 12.f, FColor(190, 195, 180));
 
 	Wheel(-900.f, -1800.f, TEXT("P10A"), TEXT("甲"));
 	Wheel(-700.f, -2400.f, TEXT("P10B"), TEXT("乙"));
 	Wheel(-980.f, -2200.f, TEXT("P10C"), TEXT("丙"));
 	Plate(-800.f, -2100.f, TEXT("P10OK"));
-	AddLabel(W(-200.f, -1800.f, 168.f), 90.f, TEXT("甲  1"), 18.f, FColor(220, 190, 150));
-	AddLabel(W(-250.f, -2400.f, 168.f), 90.f, TEXT("乙  5"), 18.f, FColor(220, 190, 150));
-	AddLabel(W(-600.f, -1600.f, 168.f), 0.f, TEXT("丙  7"), 18.f, FColor(220, 190, 150));
+	Clue(163.f, -1800.f, 0.f, 10, 0);
+	Clue(-250.f, -2563.f, 90.f, 10, 1);
+	Clue(-1083.f, -1600.f, 0.f, 10, 2);
 
 	Pad(-160.f, -1700.f, TEXT("南甬"));
 	Pad(-800.f, -2000.f, TEXT("工具间"));
 	Pad(2600.f, 620.f, TEXT("门廊"));
 	Pad(3300.f, 250.f, TEXT("车棚"));
-	Pad(3400.f, 1100.f, TEXT("旧阅览"));
+	Pad(3400.f, 1100.f, TEXT("三楼旧阅览室"), Reading);
 }

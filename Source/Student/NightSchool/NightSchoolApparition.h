@@ -21,11 +21,14 @@ public:
 	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
 
 	void Configure(const FBox& InRoom, const TArray<FVector>& InWaypoints, const FString& InWrongGlyph);
-	bool ContainsXY(const FVector& Point) const { return Room.IsInsideXY(Point); }
+	bool Contains(const FVector& Point) const { return Room.IsInside(Point); }
 
 private:
 	bool CanSeePlayer(class ANightSchoolCharacter* Player) const;
 	class ANightSchoolCharacter* FindPlayer() const;
+	void TryCatchPlayer(class ANightSchoolCharacter* Player);
+	FVector FindMoveDirection(const FVector& Goal, const AActor* Target) const;
+	void UpdateAnimation();
 
 	FBox Room = FBox(EForceInit::ForceInit);
 	TArray<FVector> Waypoints;
@@ -33,8 +36,8 @@ private:
 	float StunRemaining = 0.f;
 	float HitCooldown = 0.f;
 	float LoseSightTime = 0.f;
+	float BlockedTime = 0.f;
 	bool bChasing = false;
-	bool bWasMoving = false;
 	FString WrongGlyph;
 
 	UPROPERTY()
@@ -42,4 +45,10 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UAnimationAsset> IdleAnim;
+
+	UPROPERTY()
+	TObjectPtr<UAnimationAsset> ChaseAnim;
+
+	UPROPERTY()
+	TObjectPtr<UAnimationAsset> PlayingAnim;
 };

@@ -111,5 +111,9 @@ enum class ENightPropId : uint8
 	StudyC,
 	StudyD,
 	StudyBench,
-	ToolCabinet
+	ToolCabinet,
+	DormEntrance,
+	DormSignIn,
+	DormAnnouncement,
+	DialClue
 };

@@ -37,6 +37,9 @@ public:
 	FName GetMarker() const { return Marker; }
 
 private:
+	void BuildDoorHardware(const FVector& Extent);
+	void SetEntrancePose(float Progress);
+
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UBoxComponent> CollisionBox;
 
@@ -48,7 +51,7 @@ private:
 	FText Prompt;
 	FVector ClosedLocation = FVector::ZeroVector;
 	FVector OpenLocation = FVector::ZeroVector;
-	FVector SlideOffset = FVector::ZeroVector;
+	float DoorProgress = 0.f;
 	bool bAvailable = true;
 	bool bDoor = false;
 	bool bDoorOpen = false;
