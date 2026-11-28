@@ -1,77 +1,148 @@
 # The Inner Room
 
-A close third-person psychological horror game built in Unreal Engine 5. The player is a boarding high school student under academic pressure, and as the story unfolds, they begin to encounter a second layer of rooms behind the ordinary campus: a place where dread has form, silence is a weapon, and every clue matters.
+**The Inner Room** is a narrative psychological horror game built with **Unreal Engine 5.7**. It follows Xu Zhixia, a final-year boarding high school science student trapped under the pressure of academic performance, family expectations, and constant surveillance.
 
-This project is a narrative horror experience with exploration, environmental storytelling, and a structured progression system driven by chapter seals, notices, and room-based puzzle logic.
+As Xu moves through familiar corridors and classrooms, he begins to encounter a second, distorted version of the school. The game combines close third-person exploration, environmental storytelling, puzzle sequences, and chapter-based progression. It has no combat system; fear comes from observation, limited visibility, and the player’s choices.
 
-## Story overview
+## Story
 
-Xu Zhixia is a top-track science student in his final year of high school. His single mother, Xu Guifang, calls every day to check on his grades, and the pressure of school, family expectations, and isolation begins to invade every space in his life. In the dormitory, the ordinary walls are no longer neutral. The hallways hold a hidden logic, and the ghosts of fear and memory begin to move in a pattern of their own.
+Xu Zhixia is pressured to maintain perfect grades. His mother, Xu Guifang, calls every night to check his scores, while the school and his own fears leave him increasingly isolated.
 
-The game does not rely on combat. Instead, it emphasizes tension, observation, and careful movement: turning the lights, listening for clues, leaning around corners, and choosing how to confront the truth behind the rooms.
+Under that pressure, Xu hallucinates a parallel school in which hidden malice takes physical form. He must collect evidence, mark chapter seals, solve room-based puzzles, and confront the things he has avoided. The final journey leads to one of two endings: leave, or remain hidden.
 
-## Gameplay
+## Features
 
-The camera sits on the right shoulder, close and narrow, so the body blocks the lower view and nothing behind him is visible until he turns. There is no face on that body. The only time he looks at a face of himself is the figure already standing in the light. The story is still six chapters, each with a required seal. Two more rings sit on the path that was already there: one on the coin box, one in the hall before the office takes the paper. A south walk, a tool room, and an east wing past the store are side exploration. They do not add a chapter or a third ending. Reading, backtracking, and walking those wings is meant to take about ten hours. Rushing the six doors is shorter. This environment has no Unreal Editor, so that length was not timed in Play.
+- Close right-shoulder, third-person camera
+- Six-chapter narrative progression
+- Seals, notices, records, and collectable evidence
+- Room-based puzzles and optional clues
+- Faceless classroom threats without a combat system
+- Sprinting, crouching, wall leaning, and limited light mechanics
+- Two meaningful endings
+- Runtime-generated geometry and environmental details
+- A Blender tool for generating the protagonist’s static mesh
 
-### Core mechanics
-- WASD to move
-- Mouse to look around
-- Shift to sprint
-- Ctrl to crouch
-- Q to lean left while near a wall
-- E to lean right while near a wall
-- G to interact
-- F to light the fading glow
-- Tab to close text or skip the room-introduction camera
-- R to replay the ending sequence
+## Controls
 
-### Survival and traversal
-The light can drive back the faceless classmates. Crouching can cause them to lose sight of the player. Soda can distract them for roughly 18 seconds. These actions are not used as attacks; they are tools to help the player escape, read the environment, and survive the pressure of the space.
+| Key | Action |
+| --- | --- |
+| `WASD` | Move |
+| `Mouse` | Look |
+| `Shift` | Sprint |
+| `Ctrl` | Crouch |
+| `Q` | Lean left |
+| `E` | Lean right |
+| `G` | Interact / place or inspect evidence |
+| `F` | Use the small light |
+| `Tab` | Close a note or skip an introduction shot |
+| `R` | Replay the ending corridor |
+
+Crouching can break visual pursuit, and light can make the faceless classmates step back. A bottle of soda can distract them for roughly 18 seconds. The light and throwing mechanics never inflict damage or end the game.
 
 ## Chapters
 
-1. Missed calls. The phone, three call transcripts, duty records, and the lens cloth. The chapter seal is placed in the front hall before the corridor opens.
-2. Empty seat. Jiang Wan's notes and class records. After sitting down, return the seal to the duty room.
-3. Treating. The coin opens the shop, receipts and records are found in the back room, and the chapter seal is placed before the office accepts the papers.
-4. The unforgiven score. Three grading notes, Liang's letter, and several meeting pages. Return the seal to the empty seat before the long wall of notices opens.
-5. The board. Four notices and the tall board. Return the seal to the covered lens before the infirmary opens.
-6. Two doors. Three old medical records, and the conversation with Zhou in two parts. Look into the light and confront the self behind it, then choose whether to leave or stay hidden.
+1. **Missed Calls** — Search the phone, call transcripts, duty records, and lens cloth to open the hall.
+2. **The Empty Seat** — Investigate Jiang Wan’s notes and class records, then return the seal to the duty room.
+3. **Treating** — Use the coin to enter the shop and collect receipts and records for the office.
+4. **The Unforgiven Score** — Examine grading notes, Liang’s letter, and meeting records.
+5. **The Board** — Search notices and return the seal to the covered camera.
+6. **Two Doors** — Review the old records and Zhou’s final conversation, then choose to leave or shut the closet from within.
+
+The chapter structure is driven by game code, seals, interactions, and room state rather than separate downloaded levels.
 
 ## Endings
 
-The ending depends on the path taken through the final sequence and the clues gathered across the story.
+| Ending | Requirement |
+| --- | --- |
+| Leave | Complete Zhou’s final conversation, sit at the empty desk, submit the paper, remove the earplugs, look at yourself in the light, and throw the switch by hand |
+| Shut In | Complete Zhou’s final conversation and close the closet from inside |
 
-| Ending | Condition | What remains |
-| --- | --- | --- |
-| Leave | Finish the final conversation, sit at the empty seat, hand in the paper, keep the earplugs off, look clearly into the light, and turn the switch by hand | Morning remains ordinary, but the truth does not disappear |
-| Stay shut in | Finish the final conversation and close the cabinet from within | The silence is real, and the unfinished paper stays behind |
+Both endings can be reached without collecting every optional essay. Pressure, exhaustion, and clues affect the narrative presentation but do not create additional endings.
 
-## How to run
+## Getting Started
 
-Open `Student.uproject` in Unreal Engine 5.7 and press Play. The project already includes the base level used for the experience and does not require extra map setup or asset downloads.
+### Requirements
 
-## Project notes
+- Unreal Engine **5.7**
+- A launcher or editor installation matching `EngineAssociation` in `Student.uproject`
+- Visual Studio or a compatible C++ build toolchain for recompiling source changes
 
-- Rooms are built from engine primitives such as cubes, spheres, and cylinders.
-- The cracked mirror and test papers are drawn at runtime.
-- The faceless classmates use the existing Mannequin asset in the project.
-- Chinese text uses the bundled Droid Sans Fallback font (Apache 2.0, located under `Content/NightSchool/Fonts/`).
-- The figure in the light is generated from `Tools/Protagonist/generate.py` as a static mesh. If the FBX is not imported yet, the same location is built from boxes in matching colors.
-- Gameplay code lives in `Source/Student/NightSchool/`.
-- The played body is the same primitive stand-in, seen from behind, with no face. `UStudentInteractionComponent` still traces from the camera.
+### Run the project
 
-When Play starts, the game instance begins automatically. No additional GameMode changes are required for the template map.
+1. Clone or download this repository.
+2. Open `Student.uproject` in Unreal Engine 5.7.
+3. Allow Unreal Engine to generate project files if prompted.
+4. Open the project and press **Play**.
 
-## Repository layout notes
+The template map and game instance already contain the required setup. The project does not need extra map reassignment or asset downloads.
 
-- `README_EN.md` contains the English version of the project documentation.
-- `Tools/Protagonist/README.md` documents the generation of the static character mesh used in the final light scene.
+```bash
+git clone https://github.com/bookid284-art/Student.git
+cd Student
+```
 
-## License and attribution
+## Project Structure
 
-This project uses Unreal Engine and the bundled font assets from the project itself. Please refer to the repository files and engine package terms for any additional licensing details.
+```text
+.
+├── Config/                  Engine and input configuration
+├── Content/                 Unreal assets, generated content, and fonts
+├── Source/Student/          C++ gameplay modules and NightSchool implementation
+├── Tools/                   Blender and asset-generation tools
+│   ├── Campus/              Campus mesh-generation utility
+│   └── Protagonist/         Xu Zhixia static-mesh generator
+├── Student.uproject         Unreal Engine project definition
+├── README.md                English project overview
+└── README_EN.md             Alternate detailed English documentation
+```
 
----
+## Technical Notes
 
-English version of the project README.
+- Gameplay code is located in `Source/Student/NightSchool/`.
+- The project uses a right-shoulder camera and a custom interaction trace from `UStudentInteractionComponent`.
+- Rooms and environmental props are primarily assembled from Unreal Engine primitive shapes.
+- The cracked mirror and score sheet are drawn at runtime.
+- The faceless classmates use the mannequin asset bundled with the project.
+- Chinese text uses the bundled **Droid Sans Fallback** font under `Content/NightSchool/Fonts/`.
+- The final light-scene figure can be generated as a static mesh with `Tools/Protagonist/generate.py`.
+
+### Generate the protagonist mesh
+
+The generator requires Blender 4.x. From the repository root:
+
+```bash
+blender --background --python Tools/Protagonist/generate.py
+```
+
+The script exports `SM_XuZhixia.fbx` to `Content/NightSchool/Characters/`. Import it as a **Static Mesh**, without skeletal mesh or animation import. See `Tools/Protagonist/README.md` for import and material details.
+
+## Building and Source Changes
+
+To change gameplay code:
+
+1. Open `Student.uproject` or generate a Visual Studio solution.
+2. Modify C++ files under `Source/Student/`.
+3. Build the project in Unreal Engine or your IDE.
+4. Run the project in the editor and verify chapter state and interactions.
+
+Generated assets and local Unreal Engine folders should not be committed unless they are intentionally part of the project.
+
+## Assets and Licensing
+
+- The project is built with Unreal Engine and may use engine-provided assets.
+- `Droid Sans Fallback` is bundled in the project and distributed under the Apache 2.0 license.
+- No dedicated license file is currently included in the repository. Check the Unreal Engine and third-party asset terms before redistributing derived builds or commercial products.
+
+## Contributing
+
+Contributions should preserve the existing horror pacing, close-camera behavior, and non-combat design. Before submitting a change:
+
+- Build cleanly in Unreal Engine 5.7.
+- Test movement, interaction, chapter progression, and both endings.
+- Document any new assets, plugins, generated files, or setup requirements.
+
+## Links
+
+- [Project repository](https://github.com/bookid284-art/Student)
+- [Protagonist mesh generator](Tools/Protagonist/README.md)
+- [Alternate English README](README_EN.md)
