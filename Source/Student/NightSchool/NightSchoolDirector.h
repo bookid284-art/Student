@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "NightSchoolJournal.h"
 #include "NightSchoolTypes.h"
 #include "NightSchoolDirector.generated.h"
 
@@ -10,6 +11,12 @@ class ANightSchoolApparition;
 class ANightSchoolCharacter;
 class ANightSchoolProp;
 class APointLight;
+class UMaterialInterface;
+class UStaticMesh;
+class USkeletalMesh;
+class USoundAttenuation;
+class USoundWave;
+class USpotLightComponent;
 
 /** 第一次走进房间时，镜头要扫过的范围。 */
 struct FNightRoomView
@@ -18,6 +25,7 @@ struct FNightRoomView
 	FBox Bounds;
 	FString Name;
 	bool bSeen = false;
+	bool bShowPreview = true;
 };
 
 /** 印台记下的进度。解不开就退回这里，不是另一种结局。 */
@@ -179,12 +187,11 @@ public:
 	const FString& GetEndingBody() const { return EndingBody; }
 	float GetFear() const { return Fear; }
 	ENightEnding GetEnding() const { return CurrentEnding; }
-	FString GetObjective() const;
-	FString GetChapterLine() const;
+	void BuildJournal(TArray<FNightSchoolJournalEntry>& Entries) const;
+	void GetJournalRooms(TArray<FNightSchoolJournalRoom>& Rooms) const;
+	TOptional<FNightSchoolJournalStep> GetTimedObjective() const;
+	int32 GetPuzzleSecondsLeft() const { return ActivePuzzle < 0 ? -1 : FMath::CeilToInt(PuzzleTime); }
 	FString GetPreviewLine() const;
-	FString GetPuzzleLine() const;
-	FString GetFacingLine() const;
-	FString GetThreadsLine() const;
 	FString GetItemsLine() const;
 	int32 GetChapterIndex() const;
 
@@ -192,11 +199,24 @@ public:
 
 private:
 	FVector W(float X, float Y, float Z) const;
-	UStaticMeshComponent* AddBox(const FVector& Center, const FVector& Size, const FLinearColor& Color, bool bShadow, bool bCollision);
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> DampPlaster;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> WornTerrazzo;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> SelfModel;
+
+	UPROPERTY()
+	TObjectPtr<USkeletalMesh> SelfRig;
+
+	UStaticMeshComponent* AddBox(const FVector& Center, const FVector& Size, const FLinearColor& Color, bool bShadow, bool bCollision, UMaterialInterface* Surface = nullptr);
 	void AddSphere(const FVector& Center, float Radius, const FLinearColor& Color, bool bCollision);
 	void AddCylinder(const FVector& Center, float Radius, float Height, const FRotator& Rotation, const FLinearColor& Color, bool bCollision);
 	void AddLabel(const FVector& Location, float Yaw, const FString& Text, float WorldSize, const FColor& Color);
-	void AddLantern(float X, float Y, float Z, float Intensity, bool bCalm);
+	void AddLantern(float X, float Y, float Z, float Intensity, bool bCalm, bool bPracticalOnly = false, int32 Floor = 0);
+	void AddWorktable(const FVector& Top, float Width, float Depth, const FLinearColor& Color);
 	void AddSprite(const FVector& Location, float Yaw, UTexture2D* Texture, float WidthCm, float HeightCm);
 	ANightSchoolProp* SpawnProp(ENightPropId Id, const FVector& Location, const FVector& Extent, const FLinearColor& Color, const FText& Prompt, const FVector& Slide, float LabelYaw, const FString& Label);
 	ANightSchoolApparition* SpawnGhost(const FBox& Room, const TArray<FVector>& Points, const FString& Glyph);
@@ -265,8 +285,59 @@ private:
 	void BuildShell();
 	void BuildStructure();
 	void BuildDressing();
+	void BuildServiceRooms();
+	void BuildDormFloors();
 	void BuildLights();
 	void BuildAudio();
+	void BuildDormExterior();
+	void BuildDormExteriorLighting();
+	void BuildCampusDressing();
+	void BuildCampusLighting();
+	void BuildCampusAudio();
+	void TickCampus(float Time, float DeltaSeconds);
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> DormSignIn;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> DormAnnouncement;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> DormEntranceSign;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> DormNightSky;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> DormCourtyardTree;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> DormExteriorTile;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> CampusTube;
+
+	UPROPERTY()
+	TObjectPtr<USoundWave> CampusAir;
+
+	UPROPERTY()
+	TObjectPtr<USoundWave> CampusBallast;
+
+	UPROPERTY()
+	TObjectPtr<USoundWave> CampusKnock;
+
+	UPROPERTY()
+	TObjectPtr<USoundWave> CampusScrape;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundAttenuation> CampusEchoAttenuation;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USpotLightComponent> UnsteadyTubeLight;
+
+	FRandomStream CampusSoundRandom;
+	float CampusCueDelay = 0.f;
+	bool bNextCampusKnock = true;
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USceneComponent> Root;
@@ -431,11 +502,9 @@ private:
 
 	TArray<FNightRoomView> RoomViews;
 	TArray<FVector> PreviewPoints;
+	TArray<FVector> PreviewLookPoints;
 	FVector PreviewLook = FVector::ZeroVector;
 	FString PreviewCaption;
-	FString ChapterBanner;
-	int32 ShownChapter = 0;
-	float ChapterBannerTime = 0.f;
 	float PreviewTime = 0.f;
 	float PreviewDuration = 1.f;
 	float PreviewReturnLeft = 0.f;

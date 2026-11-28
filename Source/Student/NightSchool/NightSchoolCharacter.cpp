@@ -1,10 +1,14 @@
 #include "NightSchool/NightSchoolCharacter.h"
 
+#include "Animation/AnimSequence.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EnhancedInputComponent.h"
 #include "Math/RotationMatrix.h"
@@ -21,6 +25,7 @@
 #include "NightSchool/NightSchoolSlate.h"
 #include "Student.h"
 #include "StudentInteractionComponent.h"
+#include "UObject/ConstructorHelpers.h"
 
 namespace
 {
@@ -58,14 +63,29 @@ ANightSchoolCharacter::ANightSchoolCharacter()
 	GetCharacterMovement()->AirControl = 0.25f;
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
 	GetCharacterMovement()->SetCrouchedHalfHeight(60.f);
-	GetMesh()->SetHiddenInGame(true);
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> BodyAsset(TEXT("/Game/NightSchool/Characters/SM_XuZhixia_Night"));
+	StudentBodyAsset = BodyAsset.Object;
+	static ConstructorHelpers::FObjectFinderOptional<USkeletalMesh> Rig(TEXT("/Game/NightSchool/Characters/XuZhixia/SK_XuZhixia/SkeletalMeshes/SK_XuZhixia"));
+	static ConstructorHelpers::FObjectFinderOptional<UAnimSequence> Idle(TEXT("/Game/NightSchool/Characters/XuZhixia/SK_XuZhixia/SkeletalMeshes/SK_XuZhixiaNS_Idle"));
+	static ConstructorHelpers::FObjectFinderOptional<UAnimSequence> Walk(TEXT("/Game/NightSchool/Characters/XuZhixia/SK_XuZhixia/SkeletalMeshes/SK_XuZhixiaNS_Walk"));
+	static ConstructorHelpers::FObjectFinderOptional<UAnimSequence> Run(TEXT("/Game/NightSchool/Characters/XuZhixia/SK_XuZhixia/SkeletalMeshes/SK_XuZhixiaNS_Run"));
+	static ConstructorHelpers::FObjectFinderOptional<UAnimSequence> CrouchIdle(TEXT("/Game/NightSchool/Characters/XuZhixia/SK_XuZhixia/SkeletalMeshes/SK_XuZhixiaNS_CrouchIdle"));
+	static ConstructorHelpers::FObjectFinderOptional<UAnimSequence> CrouchWalk(TEXT("/Game/NightSchool/Characters/XuZhixia/SK_XuZhixia/SkeletalMeshes/SK_XuZhixiaNS_CrouchWalk"));
+	BodyIdle = Idle.Get();
+	BodyWalk = Walk.Get();
+	BodyRun = Run.Get();
+	BodyCrouchIdle = CrouchIdle.Get();
+	BodyCrouchWalk = CrouchWalk.Get();
+	GetMesh()->SetSkeletalMeshAsset(Rig.Get());
+	GetMesh()->SetHiddenInGame(!Rig.Get());
+	GetMesh()->SetCastShadow(false);
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(GetCapsuleComponent());
 	Camera->SetRelativeLocation(FVector(0.f, 0.f, 64.f));
 	Camera->bUsePawnControlRotation = false;
-	Camera->SetFieldOfView(66.f);
+	Camera->SetFieldOfView(74.f);
 
 	Flashlight = CreateDefaultSubobject<USpotLightComponent>(TEXT("Flashlight"));
 	Flashlight->SetupAttachment(Camera);
@@ -73,11 +93,11 @@ ANightSchoolCharacter::ANightSchoolCharacter()
 	Flashlight->SetRelativeRotation(FRotator(-6.f, 0.f, 0.f));
 	Flashlight->SetMobility(EComponentMobility::Movable);
 	Flashlight->bUseInverseSquaredFalloff = false;
-	Flashlight->SetIntensity(48.f);
+	Flashlight->SetIntensity(13.f);
 	Flashlight->SetAttenuationRadius(1900.f);
-	Flashlight->SetInnerConeAngle(14.f);
+	Flashlight->SetInnerConeAngle(10.f);
 	Flashlight->SetOuterConeAngle(32.f);
-	Flashlight->SetLightColor(FLinearColor(1.f, 0.95f, 0.86f));
+	Flashlight->SetLightColor(FLinearColor(0.91f, 0.96f, 0.90f));
 	Flashlight->SetCastShadows(true);
 	Flashlight->SetVisibility(false);
 
@@ -97,6 +117,7 @@ void ANightSchoolCharacter::BeginPlay()
 		Flashlight->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	}
 	BuildBody();
+	UpdateBodyPose(true);
 }
 
 void ANightSchoolCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -209,11 +230,16 @@ AActor* ANightSchoolCharacter::GetFocusedActor() const
 
 void ANightSchoolCharacter::SetReading(bool bInReading)
 {
+	if (bReading == bInReading)
+	{
+		return;
+	}
 	bReading = bInReading;
 	if (bReading)
 	{
 		bSprintHeld = false;
 	}
+	SetDocumentInput(bReading || bJournalOpen);
 }
 
 void ANightSchoolCharacter::SetPreviewing(bool bInPreview)
@@ -290,7 +316,7 @@ void ANightSchoolCharacter::ApplyResume(const FVector& Location, const FRotator&
 
 void ANightSchoolCharacter::BuildBody()
 {
-	if (BodyRoot || !NightSchoolArt::Cube())
+	if (BodyRoot || GetMesh()->GetSkeletalMeshAsset())
 	{
 		return;
 	}
@@ -298,6 +324,17 @@ void ANightSchoolCharacter::BuildBody()
 	BodyRoot->SetupAttachment(GetCapsuleComponent());
 	BodyRoot->SetRelativeLocation(FVector(0.f, 0.f, -88.f));
 	BodyRoot->RegisterComponent();
+
+	if (StudentBodyAsset)
+	{
+		StudentBody = NewObject<UStaticMeshComponent>(this, TEXT("StudentBody"));
+		StudentBody->SetupAttachment(BodyRoot);
+		StudentBody->SetStaticMesh(StudentBodyAsset);
+		StudentBody->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		StudentBody->SetCastShadow(false);
+		StudentBody->RegisterComponent();
+		return;
+	}
 
 	const FLinearColor Skin(0.62f, 0.45f, 0.36f);
 	const FLinearColor Hair(0.06f, 0.05f, 0.045f);
@@ -389,11 +426,11 @@ void ANightSchoolCharacter::UpdateLean(float DeltaSeconds)
 	const FVector Forward = YawOnly.Vector();
 	const FVector Right = FRotationMatrix(YawOnly).GetUnitAxis(EAxis::Y);
 	const float Time = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
-	const float Arm = FMath::Lerp(104.f, 76.f, Fear01);
+	const float Arm = FMath::Lerp(152.f, 112.f, Fear01);
 	const float Height = bIsCrouched ? 40.f : 60.f;
 	// 射线从胶囊内部发出。肩膀外侧贴墙时会穿进墙里，从那里再探就找不到墙。
 	const FVector Safe = GetActorLocation() + FVector(0.f, 0.f, Height);
-	const FVector Aim = Safe + Right * (30.f + LeanAlpha * 42.f) + Forward * (FMath::Abs(LeanAlpha) * 14.f);
+	const FVector Aim = Safe + Right * (58.f + LeanAlpha * 42.f) + Forward * (FMath::Abs(LeanAlpha) * 14.f);
 	auto PullCamera = [this](const FVector& From, const FVector& To)
 	{
 		if (!GetWorld())
@@ -402,9 +439,10 @@ void ANightSchoolCharacter::UpdateLean(float DeltaSeconds)
 		}
 		FHitResult Hit;
 		FCollisionQueryParams Params(SCENE_QUERY_STAT(NightShoulder), false, this);
-		if (GetWorld()->LineTraceSingleByChannel(Hit, From, To, ECC_Visibility, Params))
+		if (GetWorld()->SweepSingleByChannel(Hit, From, To, FQuat::Identity, ECC_Camera,
+			FCollisionShape::MakeSphere(16.f), Params))
 		{
-			return Hit.ImpactPoint + Hit.ImpactNormal * 16.f;
+			return Hit.bStartPenetrating ? From : Hit.Location - (To - From).GetSafeNormal() * FMath::Min(1.f, Hit.Distance);
 		}
 		return To;
 	};
@@ -418,19 +456,10 @@ void ANightSchoolCharacter::UpdateLean(float DeltaSeconds)
 		SmoothedView = Desired;
 		bViewReady = true;
 	}
-	else if (GetWorld())
+	else
 	{
 		const FVector Next = FMath::VInterpTo(SmoothedView, Desired, DeltaSeconds, 8.f);
-		FHitResult Block;
-		FCollisionQueryParams Params(SCENE_QUERY_STAT(NightShoulderSmooth), false, this);
-		if (GetWorld()->LineTraceSingleByChannel(Block, SmoothedView, Next, ECC_Visibility, Params))
-		{
-			SmoothedView = Desired;
-		}
-		else
-		{
-			SmoothedView = Next;
-		}
+		SmoothedView = PullCamera(Safe, Next);
 	}
 	Camera->SetWorldLocation(SmoothedView);
 	FRotator View = Control;
@@ -438,6 +467,12 @@ void ANightSchoolCharacter::UpdateLean(float DeltaSeconds)
 	Camera->SetWorldRotation(View);
 
 	const bool bShowHead = FVector::Dist(SmoothedView, Safe) > 46.f;
+	UpdateBodyPose(bShowHead);
+	if (StudentBody)
+	{
+		StudentBody->SetVisibility(bShowHead);
+		StudentBody->SetRelativeScale3D(FVector(1.f, 1.f, bIsCrouched ? 0.73f : 1.f));
+	}
 	for (UStaticMeshComponent* Part : HeadParts)
 	{
 		if (Part)
@@ -463,6 +498,41 @@ void ANightSchoolCharacter::UpdateLean(float DeltaSeconds)
 	}
 }
 
+void ANightSchoolCharacter::UpdateBodyPose(bool bCameraClear)
+{
+	USkeletalMeshComponent* Body = GetMesh();
+	if (!Body->GetSkeletalMeshAsset())
+	{
+		return;
+	}
+	Body->SetVisibility(bCameraClear);
+	Body->SetRelativeLocation(FVector(0.f, 0.f, -GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()));
+	const float Speed = GetVelocity().Size2D();
+	const bool bMovingOnFloor = Speed > 12.f && GetCharacterMovement()->IsMovingOnGround();
+	UAnimationAsset* Desired = BodyIdle;
+	float Rate = 1.f;
+	if (bIsCrouched)
+	{
+		Desired = bMovingOnFloor ? BodyCrouchWalk.Get() : BodyCrouchIdle.Get();
+		if (bMovingOnFloor)
+		{
+			Rate = FMath::Clamp(Speed / 112.f, 0.60f, 1.45f);
+		}
+	}
+	else if (bMovingOnFloor)
+	{
+		const bool bRunning = Speed > WalkSpeed + 35.f;
+		Desired = bRunning ? BodyRun.Get() : BodyWalk.Get();
+		Rate = FMath::Clamp(Speed / (bRunning ? 365.f : 180.f), 0.55f, 1.65f);
+	}
+	if (Desired && Desired != CurrentBodyAnimation)
+	{
+		Body->PlayAnimation(Desired, true);
+		CurrentBodyAnimation = Desired;
+	}
+	Body->SetPlayRate(Rate);
+}
+
 void ANightSchoolCharacter::LeanLeftStarted()
 {
 	bLeanLeft = !bPreviewing && !bReading && !bEnded;
@@ -486,7 +556,7 @@ void ANightSchoolCharacter::LeanRightStopped()
 void ANightSchoolCharacter::SetEnded(bool bInEnded)
 {
 	bEnded = bInEnded;
-	bReading = false;
+	SetReading(false);
 	bSprintHeld = false;
 	if (bEnded)
 	{
@@ -516,6 +586,8 @@ void ANightSchoolCharacter::EnsureInputAssets()
 	InteractAction = NewObject<UInputAction>(this);
 	FlashlightAction = NewObject<UInputAction>(this);
 	CloseAction = NewObject<UInputAction>(this);
+	CloseAction->bTriggerWhenPaused = true;
+	JournalAction = NewObject<UInputAction>(this);
 	RestartAction = NewObject<UInputAction>(this);
 	JumpAction = NewObject<UInputAction>(this);
 	LeanLeftAction = NewObject<UInputAction>(this);
@@ -562,6 +634,8 @@ void ANightSchoolCharacter::EnsureInputAssets()
 	MappingContext->MapKey(CloseAction, EKeys::Tab);
 	MappingContext->MapKey(CloseAction, EKeys::Escape);
 	MappingContext->MapKey(CloseAction, EKeys::Gamepad_FaceButton_Right);
+	MappingContext->MapKey(JournalAction, EKeys::J);
+	MappingContext->MapKey(JournalAction, EKeys::Gamepad_Special_Left);
 	MappingContext->MapKey(LeanLeftAction, EKeys::Q);
 	MappingContext->MapKey(LeanLeftAction, EKeys::Gamepad_DPad_Left);
 	MappingContext->MapKey(LeanRightAction, EKeys::E);
@@ -608,6 +682,7 @@ void ANightSchoolCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 		Enhanced->BindAction(InteractAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::Interact);
 		Enhanced->BindAction(FlashlightAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::ToggleFlashlight);
 		Enhanced->BindAction(CloseAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::CloseReading);
+		Enhanced->BindAction(JournalAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::OpenJournal);
 		Enhanced->BindAction(RestartAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::RequestRestart);
 		Enhanced->BindAction(JumpAction, ETriggerEvent::Started, this, &ANightSchoolCharacter::TryJump);
 		Enhanced->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
@@ -697,6 +772,11 @@ void ANightSchoolCharacter::ToggleFlashlight()
 
 void ANightSchoolCharacter::CloseReading()
 {
+	if (bJournalOpen)
+	{
+		SetJournalOpen(false);
+		return;
+	}
 	if (bEnded)
 	{
 		return;
@@ -711,6 +791,68 @@ void ANightSchoolCharacter::CloseReading()
 		Director->CloseNote();
 	}
 	bReading = false;
+}
+
+void ANightSchoolCharacter::OpenJournal(const FInputActionValue&)
+{
+	if (const APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		bGamepadHints = PC->IsInputKeyDown(EKeys::Gamepad_Special_Left);
+	}
+	SetJournalOpen(true);
+}
+
+void ANightSchoolCharacter::SetJournalOpen(bool bOpen)
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC || !PC->IsLocalController() || !HudWidget || bJournalOpen == bOpen)
+	{
+		return;
+	}
+	if (bOpen)
+	{
+		const ANightSchoolDirector* Director = ANightSchoolDirector::Find(GetWorld());
+		if (!Director || bEnded || bReading || bPreviewing || Director->IsNoteOpen() || Director->IsPreviewing()
+			|| UGameplayStatics::IsGamePaused(this) || !UGameplayStatics::SetGamePaused(this, true))
+		{
+			return;
+		}
+		bJournalOpen = true;
+		bSprintHeld = false;
+		bLeanLeft = false;
+		bLeanRight = false;
+		GetCharacterMovement()->StopMovementImmediately();
+
+	}
+	else
+	{
+		bJournalOpen = false;
+		UGameplayStatics::SetGamePaused(this, false);
+	}
+	SetDocumentInput(bOpen);
+}
+
+void ANightSchoolCharacter::SetDocumentInput(bool bOpen)
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC || !PC->IsLocalController() || !HudWidget)
+	{
+		return;
+	}
+	PC->bShowMouseCursor = bOpen && !bGamepadHints;
+	if (bOpen)
+	{
+		FInputModeGameAndUI Mode;
+		Mode.SetHideCursorDuringCapture(false);
+		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		Mode.SetWidgetToFocus(HudWidget);
+		PC->SetInputMode(Mode);
+	}
+	else
+	{
+		FInputModeGameOnly Mode;
+		PC->SetInputMode(Mode);
+	}
 }
 
 void ANightSchoolCharacter::TryJump()

@@ -5,9 +5,11 @@
 #include "Widgets/SWidget.h"
 #include "NightSchoolCharacter.generated.h"
 
+class UAnimationAsset;
 class UCameraComponent;
 class UInputAction;
 class USceneComponent;
+class UStaticMesh;
 class UStaticMeshComponent;
 class UInputMappingContext;
 class USpotLightComponent;
@@ -32,6 +34,10 @@ public:
 	bool IsReading() const { return bReading; }
 	bool IsPreviewing() const { return bPreviewing; }
 	bool IsEnded() const { return bEnded; }
+	UFUNCTION(BlueprintPure, Category = "Night School|Journal")
+	bool IsJournalOpen() const { return bJournalOpen; }
+	void SetJournalOpen(bool bOpen);
+	bool UsesGamepadHints() const { return bGamepadHints; }
 	bool IsFlashlightOn() const { return bFlashlightOn; }
 	float GetBattery() const { return Battery; }
 	float GetStamina() const { return Stamina; }
@@ -50,6 +56,7 @@ private:
 	void AddMappingContext();
 	void AttachHud();
 	void DetachHud();
+	void SetDocumentInput(bool bOpen);
 
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
@@ -60,6 +67,7 @@ private:
 	void Interact();
 	void ToggleFlashlight();
 	void CloseReading();
+	void OpenJournal(const FInputActionValue& Value);
 	void RequestRestart();
 	void TryJump();
 	void LeanLeftStarted();
@@ -68,6 +76,7 @@ private:
 	void LeanRightStopped();
 	void UpdateLean(float DeltaSeconds);
 	void BuildBody();
+	void UpdateBodyPose(bool bCameraClear);
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UCameraComponent> Camera;
@@ -103,6 +112,9 @@ private:
 	TObjectPtr<UInputAction> CloseAction;
 
 	UPROPERTY()
+	TObjectPtr<UInputAction> JournalAction;
+
+	UPROPERTY()
 	TObjectPtr<UInputAction> RestartAction;
 
 	UPROPERTY()
@@ -124,6 +136,8 @@ private:
 	bool bReading = false;
 	bool bPreviewing = false;
 	bool bEnded = false;
+	bool bJournalOpen = false;
+	bool bGamepadHints = false;
 	bool bFlashlightOn = false;
 	float Battery = 100.f;
 	float Stamina = 3.6f;
@@ -139,6 +153,30 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<USceneComponent> BodyRoot;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> StudentBodyAsset;
+
+	UPROPERTY()
+	TObjectPtr<UAnimationAsset> BodyIdle;
+
+	UPROPERTY()
+	TObjectPtr<UAnimationAsset> BodyWalk;
+
+	UPROPERTY()
+	TObjectPtr<UAnimationAsset> BodyRun;
+
+	UPROPERTY()
+	TObjectPtr<UAnimationAsset> BodyCrouchIdle;
+
+	UPROPERTY()
+	TObjectPtr<UAnimationAsset> BodyCrouchWalk;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimationAsset> CurrentBodyAnimation;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMeshComponent> StudentBody;
 
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> HeadParts;

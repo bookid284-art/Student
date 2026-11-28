@@ -175,7 +175,10 @@ namespace NightSchoolArt
 
 		UFont* Font = NewObject<UFont>(GetTransientPackage(), NAME_None, RF_Transient);
 		Font->FontCacheType = EFontCacheType::Runtime;
-		FTypefaceEntry& Entry = Font->CompositeFont.DefaultTypeface.Fonts.AddDefaulted_GetRef();
+		// Keep Latin and symbols from the engine font; use Droid for missing CJK glyphs.
+		Font->GetMutableInternalCompositeFont() = *FCoreStyle::Get().GetFontStyle("NormalFont").GetCompositeFont();
+		Font->GetMutableInternalCompositeFont().FallbackTypeface.Typeface.Fonts.Reset();
+		FTypefaceEntry& Entry = Font->GetMutableInternalCompositeFont().FallbackTypeface.Typeface.Fonts.AddDefaulted_GetRef();
 		Entry.Name = FName(TEXT("Regular"));
 		Entry.Font = FFontData(Face);
 		Cached = Font;

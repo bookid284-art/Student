@@ -152,7 +152,7 @@ namespace NightSchoolStory
 
 	const TCHAR* StampDone4()
 	{
-		return TEXT("第四章的章印盖回了那张空位。恨字还在批注里。章印不替梁老师收回那句话。\n\n北面长榜的门可以开了。八张告示都要看。");
+		return TEXT("第四章的章印盖回了那张空位。恨字还在批注里。章印不替梁老师收回那句话。\n\n先看北廊的四张告示，再回宿舍楼上三楼。长榜展室的门现在可以开了。");
 	}
 
 	const TCHAR* StampDone5()

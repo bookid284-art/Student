@@ -8,6 +8,7 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Components/AudioComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Math/NumericLimits.h"
@@ -20,6 +21,7 @@
 #include "Engine/PointLight.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/SkyLight.h"
+#include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -32,8 +34,12 @@
 #include "NightSchool/NightSchoolLayout.h"
 #include "NightSchool/NightSchoolProp.h"
 #include "NightSchool/NightSchoolStory.h"
+#include "Sound/SoundAttenuation.h"
+#include "Sound/SoundWave.h"
 #include "Sound/SoundWaveProcedural.h"
+#include "Components/SpotLightComponent.h"
 #include "Student.h"
+#include "UObject/ConstructorHelpers.h"
 
 namespace
 {
@@ -43,7 +49,6 @@ namespace
 	const FLinearColor Concrete(0.055f, 0.055f, 0.058f);
 	const FLinearColor Night(0.012f, 0.015f, 0.028f);
 	const FLinearColor Paper(0.42f, 0.36f, 0.26f);
-	const FLinearColor Red(0.38f, 0.025f, 0.02f);
 	const FLinearColor Rust(0.28f, 0.09f, 0.04f);
 	constexpr float WallZ = 180.f;
 	constexpr float WallH = 280.f;
@@ -58,6 +63,39 @@ ANightSchoolDirector::ANightSchoolDirector()
 	Tags.Add(TEXT("NightSchool"));
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(Root);
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> PlasterAsset(TEXT("/Game/NightSchool/Atmosphere/M_DampPlaster"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> FloorAsset(TEXT("/Game/NightSchool/Atmosphere/M_WornTerrazzo"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> BodyAsset(TEXT("/Game/NightSchool/Characters/SM_XuZhixia_Night"));
+	static ConstructorHelpers::FObjectFinderOptional<UMaterialInterface> Wall(TEXT("/Game/NightSchool/Campus/M_SchoolWall"));
+	static ConstructorHelpers::FObjectFinderOptional<UMaterialInterface> SignIn(TEXT("/Game/NightSchool/Campus/Entry/M_DormSignIn"));
+	static ConstructorHelpers::FObjectFinderOptional<UMaterialInterface> Announcement(TEXT("/Game/NightSchool/Campus/Entry/M_DormAnnouncement"));
+	static ConstructorHelpers::FObjectFinderOptional<UMaterialInterface> EntranceSign(TEXT("/Game/NightSchool/Campus/Entry/M_DormEntranceSign"));
+	static ConstructorHelpers::FObjectFinderOptional<UMaterialInterface> CampusSky(TEXT("/Game/NightSchool/Campus/Entry/Outdoor/M_CampusBlackSky"));
+	static ConstructorHelpers::FObjectFinderOptional<UMaterialInterface> NightSky(TEXT("/Game/NightSchool/Campus/Entry/M_DormNightSky"));
+	static ConstructorHelpers::FObjectFinderOptional<UStaticMesh> CourtyardTree(TEXT("/Game/NightSchool/Campus/Entry/Outdoor/SM_CampusBroadleaf/StaticMeshes/SM_CampusBroadleaf"));
+	static ConstructorHelpers::FObjectFinderOptional<UMaterialInterface> ExteriorTile(TEXT("/Game/NightSchool/Campus/Entry/M_DormExteriorTile"));
+	static ConstructorHelpers::FObjectFinderOptional<UMaterialInterface> Tube(TEXT("/Game/NightSchool/Campus/M_OldTube"));
+	static ConstructorHelpers::FObjectFinderOptional<USoundWave> Air(TEXT("/Game/NightSchool/Campus/Audio/SW_CorridorAir"));
+	static ConstructorHelpers::FObjectFinderOptional<USoundWave> Ballast(TEXT("/Game/NightSchool/Campus/Audio/SW_Ballast"));
+	static ConstructorHelpers::FObjectFinderOptional<USoundWave> Knock(TEXT("/Game/NightSchool/Campus/Audio/SW_VentKnock"));
+	static ConstructorHelpers::FObjectFinderOptional<USoundWave> Scrape(TEXT("/Game/NightSchool/Campus/Audio/SW_DistantDesk"));
+	DampPlaster = Wall.Get() ? Wall.Get() : PlasterAsset.Object.Get();
+	DormSignIn = SignIn.Get();
+	DormAnnouncement = Announcement.Get();
+	DormEntranceSign = EntranceSign.Get();
+	DormNightSky = CampusSky.Get() ? CampusSky.Get() : NightSky.Get();
+	DormCourtyardTree = CourtyardTree.Get();
+	DormExteriorTile = ExteriorTile.Get() ? ExteriorTile.Get() : PlasterAsset.Object.Get();
+	CampusTube = Tube.Get();
+	CampusAir = Air.Get();
+	CampusBallast = Ballast.Get();
+	CampusKnock = Knock.Get();
+	CampusScrape = Scrape.Get();
+	WornTerrazzo = FloorAsset.Object;
+	SelfModel = BodyAsset.Object;
+	static ConstructorHelpers::FObjectFinderOptional<USkeletalMesh> Rig(TEXT("/Game/NightSchool/Characters/XuZhixia/SK_XuZhixia/SkeletalMeshes/SK_XuZhixia"));
+	SelfRig = Rig.Get();
 }
 
 ANightSchoolDirector* ANightSchoolDirector::Find(UWorld* World)
@@ -78,7 +116,7 @@ FVector ANightSchoolDirector::W(float X, float Y, float Z) const
 	return NightSchool::Origin() + FVector(X, Y, Z);
 }
 
-UStaticMeshComponent* ANightSchoolDirector::AddBox(const FVector& Center, const FVector& Size, const FLinearColor& Color, bool bShadow, bool bCollision)
+UStaticMeshComponent* ANightSchoolDirector::AddBox(const FVector& Center, const FVector& Size, const FLinearColor& Color, bool bShadow, bool bCollision, UMaterialInterface* Surface)
 {
 	UStaticMesh* Cube = NightSchoolArt::Cube();
 	if (!Cube || Size.GetMin() <= 1.f)
@@ -96,7 +134,11 @@ UStaticMeshComponent* ANightSchoolDirector::AddBox(const FVector& Center, const 
 		Mesh->SetCollisionResponseToAllChannels(ECR_Block);
 	}
 	Mesh->SetCastShadow(bShadow);
-	if (UMaterialInstanceDynamic* Mid = NightSchoolArt::MakeColor(this, Color))
+	if (Surface)
+	{
+		Mesh->SetMaterial(0, Surface);
+	}
+	else if (UMaterialInstanceDynamic* Mid = NightSchoolArt::MakeColor(this, Color))
 	{
 		Mesh->SetMaterial(0, Mid);
 	}
@@ -174,15 +216,31 @@ void ANightSchoolDirector::AddLabel(const FVector& Location, float Yaw, const FS
 	Label->SetWorldRotation(FRotator(0.f, Yaw, 0.f));
 }
 
-void ANightSchoolDirector::AddLantern(float X, float Y, float Z, float Intensity, bool bCalm)
+void ANightSchoolDirector::AddLantern(float X, float Y, float Z, float Intensity, bool bCalm, bool bPracticalOnly, int32 Floor)
 {
-	const FVector At = W(X, Y, Z);
-	AddCylinder(W(X, Y, Z + 55.f), 2.5f, 90.f, FRotator::ZeroRotator, Red, false);
-	AddSphere(At, 18.f, FLinearColor(0.45f, 0.03f, 0.02f), false);
-	AddSphere(At, 8.f, FLinearColor(1.f, 0.42f, 0.16f), false);
+	const FVector At = NightSchool::AtFloor(X, Y, Z, Floor);
+	auto Fixture = [Floor, X, Y](float OffsetX, float OffsetY, float Height)
+	{
+		return NightSchool::AtFloor(X + OffsetX, Y + OffsetY, Height, Floor);
+	};
+	const FLinearColor Housing(0.036f, 0.044f, 0.046f);
+	const FLinearColor Tube(0.28f, 0.36f, 0.42f);
+	AddBox(Fixture(0.f, 0.f, 302.f), FVector(106.f, 24.f, 8.f), Housing, true, false);
+	for (float Offset : {-5.f, 5.f})
+	{
+		AddBox(Fixture(0.f, Offset, 296.5f), FVector(85.f, 3.6f, 3.6f), Tube, false, false, CampusTube);
+	}
+	AddBox(Fixture(-47.f, 0.f, 297.f), FVector(10.f, 20.f, 6.f), Rust, false, false);
+	AddBox(Fixture(47.f, 0.f, 297.f), FVector(10.f, 20.f, 6.f), Rust, false, false);
+
+	const float VisualIntensity = Intensity * (bCalm ? 0.17f : 0.29f);
 	if (bCalm)
 	{
 		WarmLights.Add(At);
+	}
+	if (bPracticalOnly)
+	{
+		return;
 	}
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -197,13 +255,13 @@ void ANightSchoolDirector::AddLantern(float X, float Y, float Z, float Intensity
 	{
 		Component->SetMobility(EComponentMobility::Movable);
 		Component->bUseInverseSquaredFalloff = false;
-		Component->SetIntensity(Intensity);
-		Component->SetAttenuationRadius(720.f);
-		Component->SetLightColor(FLinearColor(1.f, 0.55f, 0.28f));
+		Component->SetIntensity(VisualIntensity);
+		Component->SetAttenuationRadius(bCalm ? 265.f : 295.f);
+		Component->SetLightColor(bCalm ? FLinearColor(0.65f, 0.76f, 0.81f) : FLinearColor(0.45f, 0.62f, 0.76f));
 		Component->SetCastShadows(false);
 	}
 	FlickerLights.Add(Light);
-	FlickerBase.Add(Intensity);
+	FlickerBase.Add(VisualIntensity);
 	FlickerPhase.Add(FMath::FRandRange(1.4f, 3.2f));
 }
 
@@ -246,9 +304,25 @@ ANightSchoolProp* ANightSchoolDirector::SpawnProp(ENightPropId Id, const FVector
 	}
 	Prop->Configure(Id, Extent, Color, Prompt, Slide);
 	Props.Add(Prop);
-	if (!Label.IsEmpty())
+	if (!Slide.IsNearlyZero() && FMath::Max(Extent.X, Extent.Y) == 68.f)
 	{
-		AddLabel(Location + FVector(0.f, 0.f, Extent.Z + 16.f), LabelYaw, Label, 13.f, FColor(235, 214, 176));
+		const bool bAlongX = Extent.X > Extent.Y;
+		const FVector Along = bAlongX ? FVector::ForwardVector : FVector::RightVector;
+		const FLinearColor Trim(.068f, .075f, .072f);
+		for (float Side : {-1.f, 1.f})
+		{
+			AddBox(Location + Along * (Side * 72.f) + FVector(0.f, 0.f, 1.f),
+				bAlongX ? FVector(9.f, 30.f, 208.f) : FVector(30.f, 9.f, 208.f), Trim, true, true);
+		}
+		AddBox(Location + FVector(0.f, 0.f, 104.f),
+			bAlongX ? FVector(151.f, 30.f, 8.f) : FVector(30.f, 151.f, 8.f), Trim, true, true);
+		AddBox(Location - FVector(0.f, 0.f, 102.5f),
+			bAlongX ? FVector(151.f, 28.f, 5.f) : FVector(28.f, 151.f, 5.f), Trim, true, true);
+		if (!Label.IsEmpty())
+		{
+			const FVector Face = FRotator(0.f, LabelYaw, 0.f).Vector() * 15.f;
+			AddLabel(Location + Face + FVector(0.f, 0.f, 122.f), LabelYaw, Label, 13.f, FColor(210, 210, 193));
+		}
 	}
 	return Prop;
 }
@@ -296,15 +370,21 @@ void ANightSchoolDirector::BuildWorld()
 	}
 	BuildShell();
 	BuildStructure();
+	BuildDormFloors();
 	BuildSideMap();
 	BuildDressing();
 	BuildLights();
+	BuildDormExterior();
+	BuildDormExteriorLighting();
+	BuildCampusDressing();
+	BuildCampusLighting();
 	BuildRooms();
 	BuildSelfFigure();
 	BuildCheckpoints();
 	BuildAudio();
-	PreviewHold = 1.1f;
-	ShowStatus(TEXT("第一章。手机在西边的宿舍里亮着。这间屋一共六章。"), 12.f);
+	BuildCampusAudio();
+	PreviewHold = 0.f;
+	ShowStatus(TEXT("第一章。沿路灯走到宿舍楼门口。"), 18.f);
 	bWorldBuilt = true;
 	UE_LOG(LogStudent, Log, TEXT("里屋：幻觉已经搭好。"));
 }
@@ -312,24 +392,15 @@ void ANightSchoolDirector::BuildWorld()
 void ANightSchoolDirector::BuildShell()
 {
 	AddBox(W(600.f, 400.f, 20.f), FVector(6000.f, 6200.f, 40.f), Concrete, true, true);
-	AddBox(W(600.f, 400.f, 860.f), FVector(6000.f, 6200.f, 24.f), Night, false, true);
+	// Keep the interior shell above the rooms and leave the entrance court open to the sky.
+	AddBox(W(-1050.f, 400.f, 1085.f), FVector(2700.f, 6200.f, 24.f), Night, false, true);
+	AddBox(W(2940.f, 400.f, 860.f), FVector(1320.f, 6200.f, 24.f), Night, false, true);
+	AddBox(W(1290.f, 1750.f, 860.f), FVector(1980.f, 3500.f, 24.f), Night, false, true);
+	AddBox(W(1290.f, -2040.f, 860.f), FVector(1980.f, 1320.f, 24.f), Night, false, true);
 	AddBox(W(600.f, 3500.f, 450.f), FVector(6000.f, 40.f, 820.f), Night, false, true);
 	AddBox(W(600.f, -2700.f, 450.f), FVector(6000.f, 40.f, 820.f), Night, false, true);
 	AddBox(W(3600.f, 400.f, 450.f), FVector(40.f, 6200.f, 820.f), Night, false, true);
 	AddBox(W(-2400.f, 400.f, 450.f), FVector(40.f, 6200.f, 820.f), Night, false, true);
-	AddSphere(W(-900.f, -900.f, 640.f), 70.f, FLinearColor(0.72f, 0.76f, 0.82f), false);
-
-	FRandomStream Stars(20261023);
-	for (int32 Index = 0; Index < 36; ++Index)
-	{
-		const float X = Stars.FRandRange(-2300.f, 3500.f);
-		const float Y = Stars.FRandRange(-2600.f, 3400.f);
-		if (X > -2250.f && X < 3520.f && Y > -2600.f && Y < 2750.f)
-		{
-			continue;
-		}
-		AddSphere(W(X, Y, 790.f), Stars.FRandRange(3.f, 7.f), FLinearColor(0.8f, 0.84f, 0.9f), false);
-	}
 }
 
 void ANightSchoolDirector::BuildStructure()
@@ -337,28 +408,31 @@ void ANightSchoolDirector::BuildStructure()
 	auto WallX = [this](float X, float Y0, float Y1)
 	{
 		const float Length = FMath::Abs(Y1 - Y0);
-		AddBox(W(X, (Y0 + Y1) * 0.5f, WallZ), FVector(Thick, Length, WallH), Plaster, true, true);
+		AddBox(W(X, (Y0 + Y1) * 0.5f, WallZ), FVector(Thick, Length, WallH), Plaster, true, true, DampPlaster);
 	};
 	auto WallY = [this](float Y, float X0, float X1)
 	{
 		const float Length = FMath::Abs(X1 - X0);
-		AddBox(W((X0 + X1) * 0.5f, Y, WallZ), FVector(Length, Thick, WallH), Plaster, true, true);
+		AddBox(W((X0 + X1) * 0.5f, Y, WallZ), FVector(Length, Thick, WallH), Plaster, true, true, DampPlaster);
 	};
 	auto LintelX = [this](float X, float Y)
 	{
-		AddBox(W(X, Y, LintelZ), FVector(Thick, 150.f, LintelH), Plaster, true, true);
+		AddBox(W(X, Y, LintelZ), FVector(Thick, 150.f, LintelH), Plaster, true, true, DampPlaster);
 	};
 	auto LintelY = [this](float Y, float X)
 	{
-		AddBox(W(X, Y, LintelZ), FVector(150.f, Thick, LintelH), Plaster, true, true);
+		AddBox(W(X, Y, LintelZ), FVector(150.f, Thick, LintelH), Plaster, true, true, DampPlaster);
 	};
 
 	WallY(-600.f, -1100.f, -775.f);
 	WallY(-600.f, -625.f, 300.f);
 	LintelY(-600.f, -700.f);
 	WallX(-1100.f, -1400.f, -1075.f);
-	WallX(-1100.f, -925.f, 800.f);
+	WallX(-1100.f, -925.f, NightSchool::StairEntryY - 86.f);
+	WallX(-1100.f, NightSchool::StairEntryY + 86.f, 800.f);
 	LintelX(-1100.f, -1000.f);
+	AddBox(W(-1100.f, NightSchool::StairEntryY, LintelZ),
+		FVector(Thick, 172.f, LintelH), Plaster, true, true, DampPlaster);
 	WallX(-2200.f, -1400.f, -600.f);
 	WallY(-1400.f, -2200.f, -1100.f);
 	WallY(-600.f, -2200.f, -1100.f);
@@ -375,7 +449,10 @@ void ANightSchoolDirector::BuildStructure()
 	WallY(0.f, 75.f, 300.f);
 	LintelY(0.f, -700.f);
 	LintelY(0.f, 0.f);
-	WallX(300.f, -600.f, 0.f);
+	WallX(NightSchool::DormFacadeX, -600.f, NightSchool::DormEntranceY - 100.f);
+	WallX(NightSchool::DormFacadeX, NightSchool::DormEntranceY + 100.f, 0.f);
+	AddBox(W(NightSchool::DormFacadeX, NightSchool::DormEntranceY, LintelZ),
+		FVector(Thick, 200.f, LintelH), Plaster, true, true, DampPlaster);
 	WallX(300.f, 0.f, 325.f);
 	WallX(300.f, 475.f, 1900.f);
 	LintelX(300.f, 400.f);
@@ -410,12 +487,8 @@ void ANightSchoolDirector::BuildStructure()
 	WallY(1400.f, 900.f, 1125.f);
 	WallY(1400.f, 1275.f, 2200.f);
 	LintelY(1400.f, 1200.f);
-	WallY(1900.f, 900.f, 1525.f);
-	WallY(1900.f, 1675.f, 2200.f);
-	LintelY(1900.f, 1600.f);
-	WallX(2200.f, 1400.f, 2700.f);
-	WallX(900.f, 1900.f, 2700.f);
-	WallY(2700.f, 900.f, 2200.f);
+	WallY(1900.f, 900.f, 2200.f);
+	WallX(2200.f, 1400.f, 1900.f);
 	WallY(1400.f, 300.f, 525.f);
 	WallY(1400.f, 675.f, 900.f);
 	LintelY(1400.f, 600.f);
@@ -433,35 +506,35 @@ void ANightSchoolDirector::BuildStructure()
 	WallY(1900.f, -300.f, 300.f);
 
 	const FLinearColor Ceiling(0.07f, 0.065f, 0.06f);
-	AddBox(W(-400.f, -300.f, 314.f), FVector(1360.f, 560.f, 16.f), Ceiling, true, true);
-	AddBox(W(-700.f, 400.f, 314.f), FVector(760.f, 760.f, 16.f), Ceiling, true, true);
-	AddBox(W(0.f, 500.f, 314.f), FVector(560.f, 960.f, 16.f), Ceiling, true, true);
-	AddBox(W(750.f, 400.f, 314.f), FVector(860.f, 760.f, 16.f), Ceiling, true, true);
-	AddBox(W(600.f, 1100.f, 314.f), FVector(560.f, 560.f, 16.f), Ceiling, true, true);
-	AddBox(W(0.f, 1300.f, 314.f), FVector(560.f, 560.f, 16.f), Ceiling, true, true);
-	AddBox(W(600.f, 1650.f, 314.f), FVector(560.f, 460.f, 16.f), Ceiling, true, true);
-	AddBox(W(-550.f, 1650.f, 314.f), FVector(460.f, 460.f, 16.f), FLinearColor(0.03f, 0.028f, 0.03f), true, true);
-	AddBox(W(-400.f, -1000.f, 314.f), FVector(1360.f, 760.f, 16.f), Ceiling, true, true);
-	AddBox(W(-700.f, 1100.f, 314.f), FVector(760.f, 560.f, 16.f), Ceiling, true, true);
-	AddBox(W(1600.f, 400.f, 314.f), FVector(760.f, 760.f, 16.f), Ceiling, true, true);
-	AddBox(W(1250.f, 1100.f, 314.f), FVector(660.f, 560.f, 16.f), Ceiling, true, true);
-	AddBox(W(1900.f, 1100.f, 314.f), FVector(560.f, 560.f, 16.f), Ceiling, true, true);
-	AddBox(W(1550.f, 1650.f, 314.f), FVector(1260.f, 460.f, 16.f), Ceiling, true, true);
-	AddBox(W(-1650.f, -1000.f, 314.f), FVector(1060.f, 760.f, 16.f), Ceiling, true, true);
-	AddBox(W(2160.f, 400.f, 314.f), FVector(280.f, 760.f, 16.f), Ceiling, true, true);
-	AddBox(W(1550.f, 2300.f, 314.f), FVector(1260.f, 760.f, 16.f), Ceiling, true, true);
+	// Extend the soffits over the wall centerlines so door heads and corners remain covered.
+	AddBox(W(-400.f, -300.f, 314.f), FVector(1400.f, 600.f, 16.f), Ceiling, true, true);
+	AddBox(W(-700.f, 400.f, 314.f), FVector(800.f, 800.f, 16.f), Ceiling, true, true);
+	AddBox(W(0.f, 500.f, 314.f), FVector(600.f, 1000.f, 16.f), Ceiling, true, true);
+	AddBox(W(750.f, 400.f, 314.f), FVector(900.f, 800.f, 16.f), Ceiling, true, true);
+	AddBox(W(600.f, 1100.f, 314.f), FVector(600.f, 600.f, 16.f), Ceiling, true, true);
+	AddBox(W(0.f, 1300.f, 314.f), FVector(600.f, 600.f, 16.f), Ceiling, true, true);
+	AddBox(W(600.f, 1650.f, 314.f), FVector(600.f, 500.f, 16.f), Ceiling, true, true);
+	AddBox(W(-550.f, 1650.f, 314.f), FVector(500.f, 500.f, 16.f), Ceiling, true, true);
+	AddBox(W(-400.f, -1000.f, 314.f), FVector(1400.f, 800.f, 16.f), Ceiling, true, true);
+	AddBox(W(-700.f, 1100.f, 314.f), FVector(800.f, 600.f, 16.f), Ceiling, true, true);
+	AddBox(W(1600.f, 400.f, 314.f), FVector(800.f, 800.f, 16.f), Ceiling, true, true);
+	AddBox(W(1250.f, 1100.f, 314.f), FVector(700.f, 600.f, 16.f), Ceiling, true, true);
+	AddBox(W(1900.f, 1100.f, 314.f), FVector(600.f, 600.f, 16.f), Ceiling, true, true);
+	AddBox(W(1550.f, 1650.f, 314.f), FVector(1300.f, 500.f, 16.f), Ceiling, true, true);
+	AddBox(W(-1650.f, -1000.f, 314.f), FVector(1100.f, 800.f, 16.f), Ceiling, true, true);
+	AddBox(W(2160.f, 400.f, 314.f), FVector(320.f, 800.f, 16.f), Ceiling, true, true);
 
 	const FLinearColor FloorWood(0.16f, 0.08f, 0.04f);
-	AddBox(W(-400.f, -300.f, 43.f), FVector(1320.f, 520.f, 4.f), Concrete, false, false);
-	AddBox(W(-700.f, 400.f, 43.f), FVector(720.f, 720.f, 4.f), FloorWood, false, false);
-	AddBox(W(0.f, 500.f, 43.f), FVector(520.f, 920.f, 4.f), Concrete, false, false);
+	AddBox(W(-400.f, -300.f, 43.f), FVector(1320.f, 520.f, 4.f), Concrete, false, false, WornTerrazzo);
+	AddBox(W(-700.f, 400.f, 43.f), FVector(720.f, 720.f, 4.f), FloorWood, false, false, WornTerrazzo);
+	AddBox(W(0.f, 500.f, 43.f), FVector(520.f, 920.f, 4.f), Concrete, false, false, WornTerrazzo);
 	AddBox(W(750.f, 400.f, 43.f), FVector(820.f, 720.f, 4.f), FloorWood, false, false);
 	AddBox(W(600.f, 1100.f, 43.f), FVector(520.f, 520.f, 4.f), DarkWood, false, false);
 	AddBox(W(0.f, 1300.f, 43.f), FVector(520.f, 520.f, 4.f), FLinearColor(0.12f, 0.13f, 0.12f), false, false);
 	AddBox(W(600.f, 1650.f, 43.f), FVector(520.f, 420.f, 4.f), FLinearColor(0.22f, 0.18f, 0.12f), false, false);
 	AddBox(W(-550.f, 1650.f, 43.f), FVector(420.f, 420.f, 4.f), FLinearColor(0.04f, 0.035f, 0.035f), false, false);
-	AddBox(W(-700.f, 0.f, 46.f), FVector(140.f, 36.f, 3.f), DarkWood, false, false);
-	AddBox(W(300.f, 400.f, 46.f), FVector(36.f, 140.f, 3.f), DarkWood, false, false);
+	AddBox(W(-700.f, 0.f, 42.f), FVector(140.f, 36.f, 4.f), DarkWood, false, false);
+	AddBox(W(300.f, 400.f, 42.f), FVector(36.f, 140.f, 4.f), DarkWood, false, false);
 	AddBox(W(-700.f, -1000.f, 43.f), FVector(700.f, 720.f, 4.f), Concrete, false, false);
 	AddBox(W(-40.f, -1100.f, 43.f), FVector(620.f, 520.f, 4.f), FLinearColor(0.1f, 0.11f, 0.12f), false, false);
 	AddBox(W(-700.f, 1100.f, 43.f), FVector(700.f, 520.f, 4.f), DarkWood, false, false);
@@ -469,53 +542,76 @@ void ANightSchoolDirector::BuildStructure()
 	AddBox(W(1250.f, 1100.f, 43.f), FVector(620.f, 520.f, 4.f), DarkWood, false, false);
 	AddBox(W(1900.f, 1100.f, 43.f), FVector(520.f, 520.f, 4.f), FLinearColor(0.08f, 0.09f, 0.1f), false, false);
 	AddBox(W(1550.f, 1650.f, 43.f), FVector(1200.f, 420.f, 4.f), Concrete, false, false);
-	AddBox(W(-700.f, -600.f, 46.f), FVector(140.f, 36.f, 3.f), DarkWood, false, false);
-	AddBox(W(-700.f, 800.f, 46.f), FVector(140.f, 36.f, 3.f), DarkWood, false, false);
-	AddBox(W(1200.f, 400.f, 46.f), FVector(36.f, 140.f, 3.f), DarkWood, false, false);
+	AddBox(W(-700.f, -600.f, 42.f), FVector(140.f, 36.f, 4.f), DarkWood, false, false);
+	AddBox(W(-700.f, 800.f, 42.f), FVector(140.f, 36.f, 4.f), DarkWood, false, false);
+	AddBox(W(1200.f, 400.f, 42.f), FVector(36.f, 140.f, 4.f), DarkWood, false, false);
 	AddBox(W(-1650.f, -1000.f, 43.f), FVector(1000.f, 720.f, 4.f), Concrete, false, false);
 	AddBox(W(2160.f, 400.f, 43.f), FVector(240.f, 720.f, 4.f), DarkWood, false, false);
-	AddBox(W(1550.f, 2300.f, 43.f), FVector(1200.f, 720.f, 4.f), Concrete, false, false);
-	AddBox(W(-1100.f, -1000.f, 46.f), FVector(36.f, 140.f, 3.f), DarkWood, false, false);
-	AddBox(W(2000.f, 400.f, 46.f), FVector(36.f, 140.f, 3.f), DarkWood, false, false);
-	AddBox(W(1600.f, 1900.f, 46.f), FVector(140.f, 36.f, 3.f), DarkWood, false, false);
+	AddBox(W(-1100.f, -1000.f, 42.f), FVector(36.f, 140.f, 4.f), DarkWood, false, false);
+	AddBox(W(2000.f, 400.f, 42.f), FVector(36.f, 140.f, 4.f), DarkWood, false, false);
 }
 
 void ANightSchoolDirector::BuildDressing()
 {
 	auto Desk = [this](float X, float Y)
 	{
-		AddBox(W(X, Y, 112.f), FVector(120.f, 64.f, 8.f), Wood, true, false);
-		AddBox(W(X - 46.f, Y - 22.f, 76.f), FVector(8.f, 8.f, 64.f), DarkWood, false, false);
-		AddBox(W(X + 46.f, Y - 22.f, 76.f), FVector(8.f, 8.f, 64.f), DarkWood, false, false);
-		AddBox(W(X - 46.f, Y + 22.f, 76.f), FVector(8.f, 8.f, 64.f), DarkWood, false, false);
-		AddBox(W(X + 46.f, Y + 22.f, 76.f), FVector(8.f, 8.f, 64.f), DarkWood, false, false);
+		AddWorktable(W(X, Y, 116.f), 120.f, 64.f, Wood);
 	};
 
-	AddBox(W(-860.f, 600.f, 78.f), FVector(180.f, 90.f, 18.f), DarkWood, false, false);
-	AddBox(W(-860.f, 660.f, 96.f), FVector(180.f, 10.f, 36.f), Wood, false, false);
-	Desk(-980.f, 220.f);
-	AddBox(W(-400.f, 180.f, 100.f), FVector(36.f, 28.f, 70.f), DarkWood, false, false);
-	AddBox(W(-700.f, 772.f, 176.f), FVector(26.f, 12.f, 16.f), FLinearColor(0.02f, 0.02f, 0.025f), false, false);
-	AddSphere(W(-700.f, 760.f, 188.f), 5.f, FLinearColor(0.85f, 0.05f, 0.04f), false);
-	AddBox(W(-200.f, -320.f, 48.f), FVector(280.f, 36.f, 4.f), FLinearColor(0.28f, 0.08f, 0.05f), false, false);
+	using NightSchool::Dorm;
+	AddBox(Dorm(-860.f, 600.f, 78.f), FVector(180.f, 90.f, 18.f), DarkWood, true, true);
+	AddBox(Dorm(-860.f, 600.f, 90.f), FVector(172.f, 82.f, 6.f), FLinearColor(.17f, .18f, .16f), true, false);
+	AddWorktable(Dorm(-980.f, 220.f, 116.f), 120.f, 64.f, Wood);
+	AddBox(Dorm(-980.f, 220.f, 126.6f), FVector(18.f, 12.f, 1.2f), FLinearColor(.17f, .25f, .30f), false, false);
+	AddBox(Dorm(-389.f, 200.f, 66.f), FVector(64.f, 69.f, 52.f), DarkWood, true, true);
+	AddBox(Dorm(-700.f, 780.f, 176.f), FVector(26.f, 15.f, 16.f), FLinearColor(.025f, .029f, .034f), true, false);
+	AddBox(Dorm(-700.f, 764.f, 174.f), FVector(18.f, 24.f, 9.f), FLinearColor(.03f, .034f, .037f), true, true);
+	AddSphere(Dorm(-700.f, 739.f, 178.f), 4.f, FLinearColor(0.66f, 0.035f, 0.03f), false);
+	AddWorktable(W(-155.f, -550.f, 88.f), 238.f, 82.f, DarkWood);
+	BuildServiceRooms();
+	AddBox(W(-1012.f, 365.f, 132.f), FVector(130.f, 240.f, 184.f), DarkWood, true, true);
+	AddLabel(W(-700.f, 16.f, 264.f), 90.f, TEXT("储物间 / 北侧物柜"), 14.f, FColor(173, 187, 179));
 
 	Desk(700.f, 180.f);
 	Desk(700.f, 460.f);
 	Desk(920.f, 200.f);
 	Desk(1000.f, 600.f);
-	AddBox(W(480.f, 150.f, 70.f), FVector(70.f, 36.f, 50.f), DarkWood, false, false);
+	AddBox(W(460.f, 180.f, 61.f), FVector(66.f, 50.f, 42.f), DarkWood, true, true);
 
 	Desk(740.f, 1140.f);
-	AddBox(W(-140.f, 1220.f, 78.f), FVector(180.f, 70.f, 16.f), FLinearColor(0.2f, 0.22f, 0.2f), false, false);
-	AddBox(W(600.f, 1868.f, 150.f), FVector(70.f, 8.f, 110.f), FLinearColor(0.04f, 0.045f, 0.05f), false, false);
-	AddSphere(W(760.f, 1720.f, 188.f), 4.f, FLinearColor(0.55f, 0.08f, 0.06f), false);
-	AddBox(W(-680.f, 1820.f, 110.f), FVector(80.f, 28.f, 90.f), DarkWood, false, false);
+	AddWorktable(W(-140.f, 1220.f, 70.f), 180.f, 70.f, DarkWood);
+	AddBox(W(-140.f, 1220.f, 78.f), FVector(180.f, 70.f, 16.f), FLinearColor(.2f, .22f, .2f), true, false);
+	AddBox(W(600.f, 1882.f, 180.f), FVector(70.f, 8.f, 86.f), FLinearColor(.04f, .045f, .05f), true, false);
+	AddSphere(W(760.f, 1860.f, 160.f), 3.f, FLinearColor(.55f, .08f, .06f), false);
+	AddBox(W(-680.f, 1867.f, 85.f), FVector(80.f, 38.f, 90.f), DarkWood, true, true);
+	AddBox(W(1000.f, 782.f, 175.f), FVector(44.f, 8.f, 54.f), DarkWood, true, false);
 
-	AddBox(W(-400.f, -300.f, 292.f), FVector(220.f, 16.f, 8.f), FLinearColor(0.55f, 0.58f, 0.55f), false, false);
-	AddBox(W(0.f, 500.f, 292.f), FVector(180.f, 16.f, 8.f), FLinearColor(0.45f, 0.48f, 0.46f), false, false);
-	AddBox(W(750.f, 400.f, 292.f), FVector(240.f, 16.f, 8.f), FLinearColor(0.5f, 0.52f, 0.48f), false, false);
-	AddLabel(W(-520.f, -300.f, 170.f), 0.f, TEXT("往西 · 宿舍"), 16.f, FColor(220, 200, 160));
-	AddLabel(W(250.f, 400.f, 210.f), 180.f, TEXT("教室"), 16.f, FColor(220, 200, 160));
+	// Leave the middle of each room open; records sit on real desks or narrow wall counters.
+	struct FTable { float X, Y, Top, Width, Depth; };
+	const FTable Tables[] = {
+		{-1900.f, -1200.f, 106.f, 110.f, 68.f}, {-1500.f, -900.f, 106.f, 112.f, 66.f},
+		{-1800.f, -750.f, 106.f, 124.f, 66.f}, {-1600.f, -1100.f, 92.f, 96.f, 61.f},
+		{1120.f, 700.f, 56.f, 58.f, 56.f}, {800.f, 691.f, 82.f, 97.f, 60.f},
+		{1500.f, 230.f, 94.f, 112.f, 64.f}, {1850.f, 260.f, 97.f, 110.f, 66.f},
+		{1700.f, 520.f, 107.f, 110.f, 68.f},
+		{2220.f, 222.f, 97.f, 120.f, 62.f}, {2175.f, 593.f, 97.f, 176.f, 172.f},
+		{450.f, 1000.f, 116.f, 92.f, 63.f}, {477.f, 1310.f, 116.f, 90.f, 55.f},
+		{783.f, 1310.f, 116.f, 90.f, 55.f},
+		{1120.f, 1120.f, 116.f, 143.f, 326.f}, {1440.f, 965.f, 116.f, 192.f, 78.f},
+		{2000.f, 1200.f, 107.f, 98.f, 70.f},
+		{-180.f, 1280.f, 96.f, 95.f, 65.f}, {-100.f, 1500.f, 92.f, 177.f, 90.f},
+		{194.f, 1488.f, 96.f, 88.f, 75.f}, {190.f, 1260.f, 86.f, 80.f, 77.f},
+		{720.f, 1600.f, 74.f, 113.f, 53.f}
+	};
+	for (const FTable& Table : Tables)
+	{
+		AddWorktable(W(Table.X, Table.Y, Table.Top), Table.Width, Table.Depth, DarkWood);
+	}
+	AddBox(W(-902.f, 1240.f, 71.f), FVector(147.f, 75.f, 62.f), DarkWood, true, true);
+	AddBox(W(-860.f, 1030.f, 104.f), FVector(90.f, 44.f, 128.f), DarkWood, true, true);
+
+	AddLabel(W(-1082.f, -280.f, 204.f), 0.f, TEXT("203 宿舍 · 二楼"), 15.f, FColor(180, 194, 185));
+	AddLabel(W(284.f, 400.f, 269.f), 180.f, TEXT("教室"), 16.f, FColor(210, 210, 193));
 }
 
 void ANightSchoolDirector::BuildLights()
@@ -556,9 +652,9 @@ void ANightSchoolDirector::BuildLights()
 		Fog->Tags.Add(TEXT("NightSchool"));
 		if (UExponentialHeightFogComponent* Component = Fog->GetComponent())
 		{
-			Component->SetFogDensity(0.004f);
+			Component->SetFogDensity(0.006f);
 			Component->SetFogHeightFalloff(0.2f);
-			Component->SetFogInscatteringColor(FLinearColor(0.03f, 0.035f, 0.05f));
+			Component->SetFogInscatteringColor(FLinearColor(0.026f, 0.038f, 0.035f));
 			Component->StartDistance = 300.f;
 		}
 	}
@@ -572,19 +668,22 @@ void ANightSchoolDirector::BuildLights()
 		Post->Priority = 2.f;
 		Post->Settings.bOverride_AutoExposureMethod = true;
 		Post->Settings.AutoExposureMethod = EAutoExposureMethod::AEM_Manual;
+		// These low-intensity gameplay lights are not calibrated for physical camera EV100.
+		Post->Settings.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
+		Post->Settings.AutoExposureApplyPhysicalCameraExposure = false;
 		Post->Settings.bOverride_AutoExposureBias = true;
-		Post->Settings.AutoExposureBias = 1.05f;
+		Post->Settings.AutoExposureBias = 0.31f;
 		Post->Settings.bOverride_ColorSaturation = true;
-		Post->Settings.ColorSaturation = FVector4(0.48f, 0.44f, 0.4f, 1.f);
+		Post->Settings.ColorSaturation = FVector4(0.69f, 0.76f, 0.65f, 1.f);
 		Post->Settings.bOverride_VignetteIntensity = true;
-		Post->Settings.VignetteIntensity = 0.72f;
+		Post->Settings.VignetteIntensity = 0.48f;
 		Post->Settings.bOverride_BloomIntensity = true;
 		Post->Settings.BloomIntensity = 0.45f;
 		Post->Settings.bOverride_FilmGrainIntensity = true;
 		Post->Settings.FilmGrainIntensity = 0.22f;
 	}
 
-	const FVector Eye = W(-700.f, 760.f, 188.f);
+	const FVector Eye = NightSchool::Dorm(-700.f, 731.f, 182.f);
 	APointLight* CameraLed = GetWorld()->SpawnActor<APointLight>(APointLight::StaticClass(), FTransform(Eye), Params);
 	if (CameraLed)
 	{
@@ -594,8 +693,8 @@ void ANightSchoolDirector::BuildLights()
 		{
 			Component->SetMobility(EComponentMobility::Movable);
 			Component->bUseInverseSquaredFalloff = false;
-			Component->SetIntensity(8.f);
-			Component->SetAttenuationRadius(220.f);
+			Component->SetIntensity(3.f);
+			Component->SetAttenuationRadius(155.f);
 			Component->SetLightColor(FLinearColor(1.f, 0.15f, 0.1f));
 			Component->SetCastShadows(false);
 		}
@@ -611,17 +710,19 @@ void ANightSchoolDirector::BuildLights()
 		{
 			Component->SetMobility(EComponentMobility::Movable);
 			Component->bUseInverseSquaredFalloff = false;
-			Component->SetIntensity(36.f);
-			Component->SetAttenuationRadius(900.f);
-			Component->SetLightColor(FLinearColor(1.f, 0.84f, 0.68f));
+			Component->SetIntensity(17.f);
+			Component->SetAttenuationRadius(380.f);
+			Component->SetLightColor(FLinearColor(.84f, .83f, .75f));
 			Component->SetCastShadows(false);
 		}
 		WarmLights.Add(GlowAt);
 	}
 
-	AddLantern(-700.f, -280.f, 230.f, 16.f, true);
-	AddLantern(0.f, -280.f, 230.f, 16.f, true);
-	AddLantern(-700.f, 420.f, 240.f, 14.f, true);
+	AddLantern(-700.f, -280.f, 230.f, 10.f, true);
+	AddLantern(0.f, -280.f, 230.f, 8.f, true, true);
+
+	AddLantern(-700.f, 420.f, 240.f, 8.f, true, true, 1);
+	AddLantern(-700.f, 420.f, 240.f, 4.f, false);
 	AddLantern(0.f, 500.f, 240.f, 11.f, false);
 	AddLantern(750.f, 360.f, 240.f, 11.f, false);
 	AddLantern(600.f, 1100.f, 230.f, 10.f, false);
@@ -637,97 +738,98 @@ void ANightSchoolDirector::BuildLights()
 	AddLantern(1550.f, 1650.f, 230.f, 9.f, false);
 	AddLantern(-1650.f, -1000.f, 230.f, 14.f, true);
 	AddLantern(2160.f, 400.f, 220.f, 8.f, false);
-	AddLantern(1550.f, 2300.f, 230.f, 8.f, false);
-
-	SpawnProp(ENightPropId::Phone, W(-980.f, 220.f, 122.f), FVector(22.f, 16.f, 6.f), FLinearColor(0.04f, 0.045f, 0.05f), FText::FromString(TEXT("看未接来电")), FVector::ZeroVector, 0.f, TEXT("手机"));
-	SpawnProp(ENightPropId::Earplugs, W(-860.f, 600.f, 96.f), FVector(12.f, 10.f, 5.f), FLinearColor(0.75f, 0.72f, 0.64f), FText::FromString(TEXT("拿走耳塞")), FVector::ZeroVector, 0.f, TEXT("耳塞"));
-	SpawnProp(ENightPropId::LensCloth, W(-780.f, -1100.f, 110.f), FVector(16.f, 12.f, 4.f), FLinearColor(0.55f, 0.56f, 0.58f), FText::FromString(TEXT("拿走镜头布")), FVector::ZeroVector, 90.f, TEXT("镜头布"));
-	SpawnProp(ENightPropId::DormCamera, W(-700.f, 748.f, 170.f), FVector(18.f, 12.f, 16.f), FLinearColor(0.02f, 0.02f, 0.02f), FText::FromString(TEXT("盖上镜头")), FVector::ZeroVector, -90.f, TEXT("镜头"));
-	SpawnProp(ENightPropId::Soda, W(-380.f, 200.f, 112.f), FVector(10.f, 10.f, 18.f), FLinearColor(0.15f, 0.38f, 0.18f), FText::FromString(TEXT("拿走汽水")), FVector::ZeroVector, 180.f, TEXT("汽水"));
+	using NightSchool::Dorm;
+	SpawnProp(ENightPropId::Phone, Dorm(-980.f, 220.f, 121.f), FVector(12.f, 8.f, 5.f), FLinearColor(0.04f, 0.045f, 0.05f), FText::FromString(TEXT("看未接来电")), FVector::ZeroVector, 0.f, FString());
+	SpawnProp(ENightPropId::Earplugs, Dorm(-860.f, 600.f, 98.f), FVector(12.f, 10.f, 5.f), FLinearColor(0.65f, 0.67f, 0.59f), FText::FromString(TEXT("拿走耳塞")), FVector::ZeroVector, 0.f, FString());
+	SpawnProp(ENightPropId::LensCloth, W(-886.f, -1205.f, 96.f), FVector(16.f, 3.f, 7.f), FLinearColor(.17f, .135f, .10f), FText::FromString(TEXT("打开抽屉，拿走镜头布")), FVector::ZeroVector, 90.f, FString());
+	SpawnProp(ENightPropId::DormCamera, Dorm(-700.f, 751.f, 174.f), FVector(13.f, 9.f, 10.f), FLinearColor(.026f, .031f, .035f), FText::FromString(TEXT("盖上镜头")), FVector::ZeroVector, -90.f, FString());
+	SpawnProp(ENightPropId::Soda, Dorm(-389.f, 200.f, 104.f), FVector(7.f, 7.f, 12.f), FLinearColor(0.15f, 0.28f, 0.18f), FText::FromString(TEXT("拿走汽水")), FVector::ZeroVector, 180.f, FString());
 	SpawnProp(ENightPropId::HallDoor, W(0.f, 0.f, 145.f), FVector(68.f, 8.f, 100.f), DarkWood, FText::FromString(TEXT("推开走廊")), FVector(200.f, 0.f, 0.f), -90.f, TEXT("走廊"));
-	SpawnProp(ENightPropId::LureHall, W(160.f, 640.f, 88.f), FVector(28.f, 28.f, 12.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, -90.f, TEXT("地砖"));
-	SpawnProp(ENightPropId::LureClass, W(640.f, 280.f, 88.f), FVector(28.f, 28.f, 12.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, 180.f, TEXT("地砖"));
-	SpawnProp(ENightPropId::ExamPaper, W(1000.f, 600.f, 124.f), FVector(24.f, 18.f, 5.f), Paper, FText::FromString(TEXT("拿走旧试卷")), FVector::ZeroVector, -90.f, TEXT("试卷"));
+	SpawnProp(ENightPropId::LureHall, W(160.f, 640.f, 46.f), FVector(28.f, 28.f, 2.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, -90.f, TEXT("地砖"));
+	SpawnProp(ENightPropId::LureClass, W(640.f, 280.f, 46.f), FVector(28.f, 28.f, 2.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, 180.f, TEXT("地砖"));
+	SpawnProp(ENightPropId::ExamPaper, W(1000.f, 600.f, 121.f), FVector(24.f, 18.f, 5.f), Paper, FText::FromString(TEXT("拿走旧试卷")), FVector::ZeroVector, -90.f, TEXT("试卷"));
 	SpawnProp(ENightPropId::UnwantedDesk, W(1120.f, 700.f, 84.f), FVector(24.f, 22.f, 28.f), Wood, FText::FromString(TEXT("在空位坐下")), FVector::ZeroVector, -90.f, TEXT("空位"));
 	SpawnProp(ENightPropId::HideScore, W(460.f, 180.f, 100.f), FVector(22.f, 16.f, 18.f), DarkWood, FText::FromString(TEXT("把分数藏进抽屉")), FVector::ZeroVector, -90.f, TEXT("抽屉"));
 	SpawnProp(ENightPropId::OfficeDoor, W(600.f, 800.f, 145.f), FVector(68.f, 8.f, 100.f), DarkWood, FText::FromString(TEXT("把试卷交到门上")), FVector(200.f, 0.f, 0.f), -90.f, TEXT("办公室"));
-	SpawnProp(ENightPropId::TeacherNote, W(740.f, 1140.f, 128.f), FVector(22.f, 16.f, 4.f), Paper, FText::FromString(TEXT("读梁老师的字条")), FVector::ZeroVector, -90.f, TEXT("字条"));
+	SpawnProp(ENightPropId::TeacherNote, W(740.f, 1140.f, 120.f), FVector(22.f, 16.f, 4.f), Paper, FText::FromString(TEXT("读梁老师的字条")), FVector::ZeroVector, -90.f, TEXT("字条"));
 	SpawnProp(ENightPropId::InfirmaryDoor, W(0.f, 1000.f, 145.f), FVector(68.f, 8.f, 100.f), FLinearColor(0.16f, 0.18f, 0.16f), FText::FromString(TEXT("进入校医室")), FVector(200.f, 0.f, 0.f), -90.f, TEXT("校医室"));
-	SpawnProp(ENightPropId::Zhou, W(60.f, 1360.f, 110.f), FVector(28.f, 28.f, 36.f), FLinearColor(0.18f, 0.16f, 0.13f), FText::FromString(TEXT("听周先生说")), FVector::ZeroVector, -90.f, TEXT("周先生"));
+	SpawnProp(ENightPropId::Zhou, W(60.f, 1360.f, 76.f), FVector(28.f, 28.f, 36.f), FLinearColor(0.18f, 0.16f, 0.13f), FText::FromString(TEXT("听周先生说")), FVector::ZeroVector, -90.f, TEXT("周先生"));
 	SpawnProp(ENightPropId::LightDoor, W(600.f, 1400.f, 145.f), FVector(68.f, 8.f, 100.f), FLinearColor(0.32f, 0.26f, 0.16f), FText::FromString(TEXT("进入光里")), FVector(200.f, 0.f, 0.f), -90.f, TEXT("光"));
-	SpawnProp(ENightPropId::FinalCamera, W(760.f, 1720.f, 160.f), FVector(16.f, 12.f, 14.f), FLinearColor(0.03f, 0.03f, 0.035f), FText::FromString(TEXT("看这只镜头")), FVector::ZeroVector, 180.f, TEXT("镜头"));
-	SpawnProp(ENightPropId::FaceSwitch, W(460.f, 1680.f, 130.f), FVector(12.f, 12.f, 20.f), FLinearColor(0.72f, 0.62f, 0.38f), FText::FromString(TEXT("用手拨开开关")), FVector::ZeroVector, -90.f, TEXT("开关"));
+	SpawnProp(ENightPropId::FinalCamera, W(760.f, 1874.f, 160.f), FVector(16.f, 12.f, 14.f), FLinearColor(0.03f, 0.03f, 0.035f), FText::FromString(TEXT("看这只镜头")), FVector::ZeroVector, 180.f, TEXT("镜头"));
+	SpawnProp(ENightPropId::FaceSwitch, W(460.f, 1874.f, 130.f), FVector(12.f, 12.f, 20.f), FLinearColor(0.72f, 0.62f, 0.38f), FText::FromString(TEXT("用手拨开开关")), FVector::ZeroVector, -90.f, TEXT("开关"));
 	SpawnProp(ENightPropId::ClosetDoor, W(-300.f, 1500.f, 145.f), FVector(8.f, 68.f, 100.f), DarkWood, FText::FromString(TEXT("打开柜子")), FVector(0.f, 200.f, 0.f), 0.f, TEXT("柜子"));
-	SpawnProp(ENightPropId::ClosetLock, W(-560.f, 1720.f, 120.f), FVector(16.f, 14.f, 24.f), FLinearColor(0.12f, 0.1f, 0.09f), FText::FromString(TEXT("从里面把门带上")), FVector::ZeroVector, 0.f, TEXT("锁"));
-	SpawnProp(ENightPropId::DutyLogA, W(-900.f, -1200.f, 110.f), FVector(22.f, 16.f, 4.f), Paper, FText::FromString(TEXT("读三月的记录")), FVector::ZeroVector, 90.f, TEXT("三月"));
-	SpawnProp(ENightPropId::DutyLogB, W(-620.f, -900.f, 110.f), FVector(22.f, 16.f, 4.f), Paper, FText::FromString(TEXT("读四月的记录")), FVector::ZeroVector, 0.f, TEXT("四月"));
-	SpawnProp(ENightPropId::DutyLogC, W(-860.f, -780.f, 110.f), FVector(22.f, 16.f, 4.f), Paper, FText::FromString(TEXT("读昨夜的记录")), FVector::ZeroVector, -90.f, TEXT("昨夜"));
-	SpawnProp(ENightPropId::Coin, W(-520.f, 360.f, 100.f), FVector(12.f, 10.f, 6.f), FLinearColor(0.62f, 0.5f, 0.18f), FText::FromString(TEXT("拿走午饭钱")), FVector::ZeroVector, 0.f, TEXT("铁盒"));
-	SpawnProp(ENightPropId::NoteSeat, W(980.f, 500.f, 90.f), FVector(16.f, 12.f, 3.f), Paper, FText::FromString(TEXT("捡起桌腿下的条子")), FVector::ZeroVector, -90.f, TEXT("条子"));
-	SpawnProp(ENightPropId::NoteHall, W(-180.f, 250.f, 120.f), FVector(18.f, 8.f, 22.f), Paper, FText::FromString(TEXT("读走廊上的条子")), FVector::ZeroVector, 0.f, TEXT("条子"));
+	SpawnProp(ENightPropId::ClosetLock, W(-560.f, 1872.f, 120.f), FVector(16.f, 14.f, 24.f), FLinearColor(0.12f, 0.1f, 0.09f), FText::FromString(TEXT("从里面把门带上")), FVector::ZeroVector, 0.f, TEXT("锁"));
+	SpawnProp(ENightPropId::DutyLogA, W(-877.f, -1253.f, 119.f), FVector(21.f, 12.f, 3.f), Paper, FText::FromString(TEXT("读三月的记录")), FVector::ZeroVector, 90.f, TEXT("三月"));
+	SpawnProp(ENightPropId::DutyLogB, W(-792.f, -1252.f, 119.f), FVector(17.f, 12.f, 3.f), Paper, FText::FromString(TEXT("读四月的记录")), FVector::ZeroVector, 90.f, TEXT("四月"));
+	SpawnProp(ENightPropId::DutyLogC, W(-946.f, -708.f, 145.f), FVector(19.f, 3.f, 12.f), Paper, FText::FromString(TEXT("读昨夜的记录")), FVector::ZeroVector, -90.f, TEXT("昨夜"));
+	SpawnProp(ENightPropId::Coin, Dorm(-520.f, 360.f, 100.f), FVector(12.f, 10.f, 6.f), FLinearColor(0.62f, 0.5f, 0.18f), FText::FromString(TEXT("拿走午饭钱")), FVector::ZeroVector, 0.f, FString());
+	SpawnProp(ENightPropId::NoteSeat, W(980.f, 500.f, 46.f), FVector(16.f, 12.f, 1.5f), Paper, FText::FromString(TEXT("捡起桌腿下的条子")), FVector::ZeroVector, -90.f, TEXT("条子"));
+	SpawnProp(ENightPropId::NoteHall, W(-278.f, 250.f, 120.f), FVector(8.f, 18.f, 22.f), Paper, FText::FromString(TEXT("读走廊上的条子")), FVector::ZeroVector, 0.f, TEXT("条子"));
 	SpawnProp(ENightPropId::NoteShop, W(1700.f, 520.f, 110.f), FVector(16.f, 12.f, 3.f), Paper, FText::FromString(TEXT("读柜台里的条子")), FVector::ZeroVector, 180.f, TEXT("条子"));
 	SpawnProp(ENightPropId::NoteLocker, W(-860.f, 1000.f, 120.f), FVector(14.f, 8.f, 18.f), Paper, FText::FromString(TEXT("抽出柜缝里的条子")), FVector::ZeroVector, 0.f, TEXT("条子"));
 	SpawnProp(ENightPropId::ShopDoor, W(1200.f, 400.f, 145.f), FVector(8.f, 68.f, 100.f), FLinearColor(0.22f, 0.18f, 0.12f), FText::FromString(TEXT("把硬币送进卷帘")), FVector(0.f, 200.f, 0.f), 180.f, TEXT("小卖部"));
 	SpawnProp(ENightPropId::Ledger, W(1500.f, 220.f, 100.f), FVector(22.f, 16.f, 6.f), DarkWood, FText::FromString(TEXT("拿走请客账")), FVector::ZeroVector, -90.f, TEXT("账本"));
-	SpawnProp(ENightPropId::LedgerBoard, W(200.f, 720.f, 150.f), FVector(28.f, 8.f, 36.f), Wood, FText::FromString(TEXT("把账本钉上布告栏")), FVector::ZeroVector, 180.f, TEXT("布告"));
+	SpawnProp(ENightPropId::LedgerBoard, W(278.f, 720.f, 150.f), FVector(8.f, 28.f, 36.f), Wood, FText::FromString(TEXT("把账本钉上布告栏")), FVector::ZeroVector, 180.f, TEXT("布告"));
 	SpawnProp(ENightPropId::GradeDoor, W(900.f, 1050.f, 145.f), FVector(8.f, 68.f, 100.f), DarkWood, FText::FromString(TEXT("进入年级组")), FVector(0.f, 200.f, 0.f), 180.f, TEXT("年级组"));
 	SpawnProp(ENightPropId::MinutesSun, W(1100.f, 980.f, 120.f), FVector(20.f, 14.f, 4.f), Paper, FText::FromString(TEXT("读孙老师的记录")), FVector::ZeroVector, -90.f, TEXT("孙"));
-	SpawnProp(ENightPropId::MinutesLiang, W(1400.f, 1100.f, 120.f), FVector(20.f, 14.f, 4.f), Paper, FText::FromString(TEXT("读页边上的字")), FVector::ZeroVector, 180.f, TEXT("页边"));
+	SpawnProp(ENightPropId::MinutesLiang, W(1390.f, 985.f, 120.f), FVector(20.f, 14.f, 4.f), Paper, FText::FromString(TEXT("读页边上的字")), FVector::ZeroVector, 180.f, TEXT("页边"));
 	SpawnProp(ENightPropId::MinutesParent, W(1150.f, 1260.f, 120.f), FVector(20.f, 14.f, 4.f), Paper, FText::FromString(TEXT("读家委会那一页")), FVector::ZeroVector, -90.f, TEXT("家长"));
-	SpawnProp(ENightPropId::NoticeA, W(1100.f, 1760.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读北廊第一张")), FVector::ZeroVector, -90.f, TEXT("一"));
-	SpawnProp(ENightPropId::NoticeB, W(1450.f, 1760.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读北廊第二张")), FVector::ZeroVector, -90.f, TEXT("二"));
-	SpawnProp(ENightPropId::NoticeC, W(1750.f, 1760.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读北廊第三张")), FVector::ZeroVector, -90.f, TEXT("三"));
-	SpawnProp(ENightPropId::NoticeD, W(2050.f, 1760.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读北廊第四张")), FVector::ZeroVector, -90.f, TEXT("四"));
+	SpawnProp(ENightPropId::NoticeA, W(1100.f, 1880.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读北廊第一张")), FVector::ZeroVector, -90.f, TEXT("一"));
+	SpawnProp(ENightPropId::NoticeB, W(1450.f, 1880.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读北廊第二张")), FVector::ZeroVector, -90.f, TEXT("二"));
+	SpawnProp(ENightPropId::NoticeC, W(1750.f, 1880.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读北廊第三张")), FVector::ZeroVector, -90.f, TEXT("三"));
+	SpawnProp(ENightPropId::NoticeD, W(2050.f, 1880.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读北廊第四张")), FVector::ZeroVector, -90.f, TEXT("四"));
 	SpawnProp(ENightPropId::PencilCase, W(-900.f, 1240.f, 110.f), FVector(16.f, 12.f, 8.f), FLinearColor(0.15f, 0.28f, 0.22f), FText::FromString(TEXT("打开写着分数的柜子")), FVector::ZeroVector, 0.f, TEXT("铅笔盒"));
 	SpawnProp(ENightPropId::BusPass, W(2000.f, 1200.f, 110.f), FVector(16.f, 12.f, 3.f), Paper, FText::FromString(TEXT("拿走过期月票")), FVector::ZeroVector, 180.f, TEXT("月票"));
-	SpawnProp(ENightPropId::Timetable, W(-80.f, -1200.f, 140.f), FVector(16.f, 6.f, 22.f), Paper, FText::FromString(TEXT("取下课表")), FVector::ZeroVector, 90.f, TEXT("课表"));
+	SpawnProp(ENightPropId::Timetable, W(-75.f, -1352.f, 148.f), FVector(16.f, 2.f, 20.f), Paper, FText::FromString(TEXT("取下课表")), FVector::ZeroVector, 90.f, TEXT("课表"));
 	SpawnProp(ENightPropId::ComputerDoor, W(1600.f, 1100.f, 145.f), FVector(8.f, 68.f, 100.f), FLinearColor(0.1f, 0.12f, 0.14f), FText::FromString(TEXT("进入微机室")), FVector(0.f, 200.f, 0.f), 180.f, TEXT("微机室"));
 	SpawnProp(ENightPropId::ReturnTray, W(-80.f, 1480.f, 100.f), FVector(30.f, 22.f, 8.f), FLinearColor(0.2f, 0.22f, 0.2f), FText::FromString(TEXT("把三样东西放到托盘上")), FVector::ZeroVector, -90.f, TEXT("托盘"));
-	SpawnProp(ENightPropId::EssayDorm, W(-960.f, 430.f, 70.f), FVector(18.f, 14.f, 3.f), Paper, FText::FromString(TEXT("捡起床下的作文")), FVector::ZeroVector, 0.f, TEXT("晚饭"));
+	SpawnProp(ENightPropId::EssayDorm, Dorm(-945.f, 550.f, 43.f), FVector(18.f, 14.f, 3.f), Paper, FText::FromString(TEXT("捡起床下的作文")), FVector::ZeroVector, 0.f, FString());
 	SpawnProp(ENightPropId::EssayShop, W(1850.f, 260.f, 100.f), FVector(18.f, 14.f, 3.f), Paper, FText::FromString(TEXT("捡起半页作文")), FVector::ZeroVector, -90.f, TEXT("同桌"));
-	SpawnProp(ENightPropId::EssayGrade, W(1480.f, 960.f, 110.f), FVector(18.f, 14.f, 3.f), Paper, FText::FromString(TEXT("捡起没交的作文")), FVector::ZeroVector, 180.f, TEXT("镜头"));
+	SpawnProp(ENightPropId::EssayGrade, W(1480.f, 960.f, 119.f), FVector(18.f, 14.f, 3.f), Paper, FText::FromString(TEXT("捡起没交的作文")), FVector::ZeroVector, 180.f, TEXT("镜头"));
 	SpawnProp(ENightPropId::EssayBench, W(720.f, 1600.f, 90.f), FVector(40.f, 16.f, 16.f), Wood, FText::FromString(TEXT("把三篇作文放上长凳")), FVector::ZeroVector, -90.f, TEXT("长凳"));
-	SpawnProp(ENightPropId::SodaShop, W(1550.f, 360.f, 100.f), FVector(10.f, 10.f, 18.f), FLinearColor(0.15f, 0.38f, 0.18f), FText::FromString(TEXT("再拿一瓶汽水")), FVector::ZeroVector, 180.f, TEXT("汽水"));
-	SpawnProp(ENightPropId::LureShop, W(1750.f, 620.f, 88.f), FVector(28.f, 28.f, 12.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, 180.f, TEXT("地砖"));
-	SpawnProp(ENightPropId::LureNotice, W(1600.f, 1580.f, 88.f), FVector(28.f, 28.f, 12.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, -90.f, TEXT("地砖"));
-	SpawnProp(ENightPropId::SpareCell, W(180.f, 1280.f, 100.f), FVector(10.f, 8.f, 14.f), FLinearColor(0.2f, 0.32f, 0.18f), FText::FromString(TEXT("拿走备用电池")), FVector::ZeroVector, -90.f, TEXT("电池"));
+	SpawnProp(ENightPropId::SodaShop, W(1516.f, 253.f, 112.f), FVector(10.f, 10.f, 18.f), FLinearColor(0.15f, 0.38f, 0.18f), FText::FromString(TEXT("再拿一瓶汽水")), FVector::ZeroVector, 180.f, TEXT("汽水"));
+	SpawnProp(ENightPropId::LureShop, W(1750.f, 620.f, 46.f), FVector(28.f, 28.f, 2.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, 180.f, TEXT("地砖"));
+	SpawnProp(ENightPropId::LureNotice, W(1600.f, 1580.f, 46.f), FVector(28.f, 28.f, 2.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, -90.f, TEXT("地砖"));
+	SpawnProp(ENightPropId::SpareCell, W(190.f, 1260.f, 100.f), FVector(10.f, 8.f, 14.f), FLinearColor(0.2f, 0.32f, 0.18f), FText::FromString(TEXT("拿走备用电池")), FVector::ZeroVector, -90.f, TEXT("电池"));
 	SpawnProp(ENightPropId::CallDoor, W(-1100.f, -1000.f, 145.f), FVector(8.f, 68.f, 100.f), DarkWood, FText::FromString(TEXT("进入通话间")), FVector(0.f, -200.f, 0.f), 0.f, TEXT("通话间"));
 	SpawnProp(ENightPropId::CallA, W(-1900.f, -1200.f, 110.f), FVector(20.f, 14.f, 4.f), Paper, FText::FromString(TEXT("读清晨那通")), FVector::ZeroVector, 90.f, TEXT("清晨"));
 	SpawnProp(ENightPropId::CallB, W(-1500.f, -900.f, 110.f), FVector(20.f, 14.f, 4.f), Paper, FText::FromString(TEXT("读锁屏那通")), FVector::ZeroVector, 0.f, TEXT("锁屏"));
 	SpawnProp(ENightPropId::CallC, W(-1800.f, -750.f, 110.f), FVector(20.f, 14.f, 4.f), Paper, FText::FromString(TEXT("读镜头那通")), FVector::ZeroVector, -90.f, TEXT("镜头"));
 	SpawnProp(ENightPropId::StampCall, W(-1600.f, -1100.f, 100.f), FVector(22.f, 16.f, 8.f), Wood, FText::FromString(TEXT("盖上第三章的章")), FVector::ZeroVector, 90.f, TEXT("章"));
-	SpawnProp(ENightPropId::StampDuty, W(-980.f, -1000.f, 110.f), FVector(22.f, 16.f, 8.f), Wood, FText::FromString(TEXT("盖上第二章的章")), FVector::ZeroVector, 0.f, TEXT("章"));
-	SpawnProp(ENightPropId::StampAnte, W(-240.f, -250.f, 110.f), FVector(28.f, 10.f, 24.f), Wood, FText::FromString(TEXT("把第一章的章印按上")), FVector::ZeroVector, 90.f, TEXT("木板"));
-	SpawnProp(ENightPropId::StampDorm, W(-480.f, 560.f, 100.f), FVector(18.f, 14.f, 8.f), Wood, FText::FromString(TEXT("放下第五章的章印")), FVector::ZeroVector, -90.f, TEXT("章"));
-	SpawnProp(ENightPropId::ClassLogA, W(500.f, 300.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读座位那页")), FVector::ZeroVector, 180.f, TEXT("座位"));
-	SpawnProp(ENightPropId::ClassLogB, W(800.f, 500.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读奶茶那页")), FVector::ZeroVector, -90.f, TEXT("奶茶"));
-	SpawnProp(ENightPropId::ClassLogC, W(1050.f, 350.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读实验那页")), FVector::ZeroVector, 180.f, TEXT("实验"));
+	SpawnProp(ENightPropId::StampDuty, W(-829.f, -1224.f, 124.f), FVector(18.f, 14.f, 8.f), Wood, FText::FromString(TEXT("盖上第二章的章")), FVector::ZeroVector, 90.f, TEXT("章"));
+	SpawnProp(ENightPropId::StampAnte, W(-225.f, -548.f, 94.f), FVector(28.f, 20.f, 6.f), Wood, FText::FromString(TEXT("把第一章的章印按上")), FVector::ZeroVector, 90.f, FString());
+	AddWorktable(Dorm(-480.f, 710.f, 92.f), 93.f, 54.f, DarkWood);
+	SpawnProp(ENightPropId::StampDorm, Dorm(-480.f, 710.f, 100.f), FVector(18.f, 14.f, 8.f), Wood, FText::FromString(TEXT("放下第五章的章印")), FVector::ZeroVector, -90.f, FString());
+	SpawnProp(ENightPropId::ClassLogA, W(700.f, 180.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读座位那页")), FVector::ZeroVector, 180.f, TEXT("座位"));
+	SpawnProp(ENightPropId::ClassLogB, W(700.f, 460.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读奶茶那页")), FVector::ZeroVector, -90.f, TEXT("奶茶"));
+	SpawnProp(ENightPropId::ClassLogC, W(920.f, 200.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读实验那页")), FVector::ZeroVector, 180.f, TEXT("实验"));
 	SpawnProp(ENightPropId::StampClass, W(800.f, 680.f, 90.f), FVector(20.f, 14.f, 8.f), Wood, FText::FromString(TEXT("盖上第四章的章")), FVector::ZeroVector, -90.f, TEXT("章"));
 	SpawnProp(ENightPropId::StoreDoor, W(2000.f, 400.f, 145.f), FVector(8.f, 68.f, 100.f), DarkWood, FText::FromString(TEXT("进入后仓")), FVector(0.f, 200.f, 0.f), 180.f, TEXT("后仓"));
-	SpawnProp(ENightPropId::ReceiptA, W(2200.f, 220.f, 100.f), FVector(16.f, 12.f, 3.f), Paper, FText::FromString(TEXT("读已付的收据")), FVector::ZeroVector, 180.f, TEXT("已付"));
+	SpawnProp(ENightPropId::ReceiptA, W(2220.f, 222.f, 100.f), FVector(16.f, 12.f, 3.f), Paper, FText::FromString(TEXT("读已付的收据")), FVector::ZeroVector, 180.f, TEXT("已付"));
 	SpawnProp(ENightPropId::ReceiptB, W(2100.f, 520.f, 100.f), FVector(16.f, 12.f, 3.f), Paper, FText::FromString(TEXT("读缺席的收据")), FVector::ZeroVector, 180.f, TEXT("缺席"));
 	SpawnProp(ENightPropId::ReceiptC, W(2240.f, 650.f, 100.f), FVector(16.f, 12.f, 3.f), Paper, FText::FromString(TEXT("读收据背面")), FVector::ZeroVector, -90.f, TEXT("背面"));
 	SpawnProp(ENightPropId::DraftA, W(450.f, 1000.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读第一页批注")), FVector::ZeroVector, -90.f, TEXT("批注"));
-	SpawnProp(ENightPropId::DraftB, W(500.f, 1280.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读第二页批注")), FVector::ZeroVector, 180.f, TEXT("点名"));
-	SpawnProp(ENightPropId::DraftC, W(780.f, 1280.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读第三页批注")), FVector::ZeroVector, -90.f, TEXT("后悔"));
-	SpawnProp(ENightPropId::AnnexDoor, W(1600.f, 1900.f, 145.f), FVector(68.f, 8.f, 100.f), DarkWood, FText::FromString(TEXT("进入长榜")), FVector(200.f, 0.f, 0.f), -90.f, TEXT("长榜"));
-	SpawnProp(ENightPropId::NoticeE, W(1100.f, 2520.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第五张")), FVector::ZeroVector, -90.f, TEXT("五"));
-	SpawnProp(ENightPropId::NoticeF, W(1400.f, 2520.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第六张")), FVector::ZeroVector, -90.f, TEXT("六"));
-	SpawnProp(ENightPropId::NoticeG, W(1700.f, 2520.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第七张")), FVector::ZeroVector, -90.f, TEXT("七"));
-	SpawnProp(ENightPropId::NoticeH, W(2000.f, 2520.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第八张")), FVector::ZeroVector, -90.f, TEXT("八"));
-	SpawnProp(ENightPropId::LureAnnex, W(1600.f, 2250.f, 88.f), FVector(28.f, 28.f, 12.f), Concrete, FText::FromString(TEXT("放下汽水")), FVector::ZeroVector, -90.f, TEXT("地砖"));
-	SpawnProp(ENightPropId::ChartA, W(-200.f, 1280.f, 100.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读物品那页")), FVector::ZeroVector, 0.f, TEXT("物品"));
-	SpawnProp(ENightPropId::ChartB, W(200.f, 1500.f, 100.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读血压那页")), FVector::ZeroVector, 180.f, TEXT("血压"));
-	SpawnProp(ENightPropId::ChartC, W(-180.f, 1520.f, 100.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读门那页")), FVector::ZeroVector, 0.f, TEXT("门"));
-	SpawnProp(ENightPropId::SelfFigure, W(620.f, 1720.f, 120.f), FVector(22.f, 16.f, 40.f), FLinearColor(0.12f, 0.18f, 0.32f), FText::FromString(TEXT("看清他")), FVector::ZeroVector, -90.f, TEXT("自己"));
-	AddLabel(W(-700.f, -540.f, 210.f), 90.f, TEXT("值班室"), 16.f, FColor(220, 200, 160));
-	AddLabel(W(-700.f, 760.f, 220.f), -90.f, TEXT("储物柜"), 16.f, FColor(220, 200, 160));
-	AddLabel(W(-1500.f, -560.f, 210.f), 90.f, TEXT("通话间"), 16.f, FColor(220, 200, 160));
-	AddLabel(W(2100.f, 140.f, 210.f), -90.f, TEXT("后仓"), 16.f, FColor(220, 200, 160));
-	AddLabel(W(1200.f, 1960.f, 210.f), 90.f, TEXT("长榜"), 16.f, FColor(220, 200, 160));
+	SpawnProp(ENightPropId::DraftB, W(500.f, 1310.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读第二页批注")), FVector::ZeroVector, 180.f, TEXT("点名"));
+	SpawnProp(ENightPropId::DraftC, W(780.f, 1310.f, 120.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读第三页批注")), FVector::ZeroVector, -90.f, TEXT("后悔"));
+	using NightSchool::Annex;
+	SpawnProp(ENightPropId::AnnexDoor, NightSchool::AtFloor(NightSchool::AnnexRoomDoorX, 0.f, 142.f, 2), FVector(80.f, 8.f, 102.f),
+		DarkWood, FText::FromString(TEXT("打开长榜展室")), FVector(188.f, 0.f, 0.f), -90.f, FString());
+	SpawnProp(ENightPropId::NoticeE, Annex(1100.f, 2670.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第五张")), FVector::ZeroVector, -90.f, FString());
+	SpawnProp(ENightPropId::NoticeF, Annex(1400.f, 2670.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第六张")), FVector::ZeroVector, -90.f, FString());
+	SpawnProp(ENightPropId::NoticeG, Annex(1700.f, 2670.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第七张")), FVector::ZeroVector, -90.f, FString());
+	SpawnProp(ENightPropId::NoticeH, Annex(2000.f, 2670.f, 150.f), FVector(18.f, 6.f, 28.f), Paper, FText::FromString(TEXT("读长榜第八张")), FVector::ZeroVector, -90.f, FString());
+	SpawnProp(ENightPropId::LureAnnex, Annex(1600.f, 2250.f, 42.f), FVector(28.f, 28.f, 2.f),
+		Concrete, FText::FromString(TEXT("把汽水放到地砖上")), FVector::ZeroVector, -90.f, FString());
+	SpawnProp(ENightPropId::ChartA, W(-180.f, 1280.f, 100.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读物品那页")), FVector::ZeroVector, 0.f, TEXT("物品"));
+	SpawnProp(ENightPropId::ChartB, W(194.f, 1488.f, 100.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读血压那页")), FVector::ZeroVector, 180.f, TEXT("血压"));
+	SpawnProp(ENightPropId::ChartC, W(-146.f, 1520.f, 100.f), FVector(18.f, 12.f, 4.f), Paper, FText::FromString(TEXT("读门那页")), FVector::ZeroVector, 0.f, TEXT("门"));
+	SpawnProp(ENightPropId::SelfFigure, W(620.f, 1788.f, 126.f), FVector(22.f, 16.f, 86.f), FLinearColor(0.12f, 0.18f, 0.32f), FText::FromString(TEXT("看清他")), FVector::ZeroVector, -90.f, TEXT("自己"));
+	AddLabel(W(-700.f, -585.f, 267.f), 90.f, TEXT("值班室"), 16.f, FColor(210, 210, 193));
+	AddLabel(W(-700.f, 785.f, 267.f), -90.f, TEXT("储物柜"), 16.f, FColor(210, 210, 193));
+	AddLabel(W(1200.f, 1885.f, 211.f), -90.f, TEXT("长榜移至宿舍楼 3F"), 14.f, FColor(176, 188, 178));
 
-	AddSprite(W(600.f, 1868.f, 180.f), -90.f, NightSchoolArt::MakeMirror(this), 56.f, 74.f);
-	AddSprite(W(1000.f, 560.f, 150.f), -90.f, NightSchoolArt::MakeScoreSheet(this), 36.f, 46.f);
+	AddSprite(W(600.f, 1877.f, 180.f), -90.f, NightSchoolArt::MakeMirror(this), 56.f, 74.f);
+	AddSprite(W(1000.f, 777.f, 175.f), -90.f, NightSchoolArt::MakeScoreSheet(this), 36.f, 46.f);
 }
 
 void ANightSchoolDirector::BuildAudio()
@@ -744,7 +846,7 @@ void ANightSchoolDirector::BuildAudio()
 	DroneAudio->SetupAttachment(GetRootComponent());
 	DroneAudio->RegisterComponent();
 	DroneAudio->SetSound(DroneWave);
-	DroneAudio->SetVolumeMultiplier(0.42f);
+	DroneAudio->SetVolumeMultiplier(0.25f);
 	QueueDrone(0.4f);
 	DroneAudio->Play();
 }
@@ -806,12 +908,13 @@ FBox ANightSchoolDirector::ClassRoom() const
 bool ANightSchoolDirector::IsInDorm(const FVector& Location) const
 {
 	const FVector Local = Location - NightSchool::Origin();
-	return Local.X > -1080.f && Local.X < -320.f && Local.Y > 30.f && Local.Y < 770.f;
+	return NightSchool::FloorAt(Location) == 1
+		&& Local.X > -1080.f && Local.X < -320.f && Local.Y > 30.f && Local.Y < 770.f;
 }
 
 bool ANightSchoolDirector::GetLurePoint(const FBox& Room, FVector& OutPoint) const
 {
-	if (LureTime <= 0.f || !Room.IsInsideXY(LurePoint))
+	if (LureTime <= 0.f || !Room.IsInside(LurePoint))
 	{
 		return false;
 	}
@@ -935,12 +1038,13 @@ void ANightSchoolDirector::SpawnAnnexGhost()
 		return;
 	}
 	bAnnexGhost = true;
-	const FBox Room(W(980.f, 1980.f, -20.f), W(2120.f, 2620.f, 420.f));
+	using NightSchool::Annex;
+	const FBox Room(Annex(980.f, 1950.f, -20.f), Annex(2120.f, 2660.f, 335.f));
 	TArray<FVector> Points;
-	Points.Add(W(1200.f, 2200.f, 128.f));
-	Points.Add(W(1700.f, 2300.f, 128.f));
-	Points.Add(W(2000.f, 2150.f, 128.f));
-	Points.Add(W(1400.f, 2400.f, 128.f));
+	Points.Add(Annex(1200.f, 2200.f, 128.f));
+	Points.Add(Annex(1700.f, 2300.f, 128.f));
+	Points.Add(Annex(2000.f, 2150.f, 128.f));
+	Points.Add(Annex(1400.f, 2400.f, 128.f));
 	SpawnGhost(Room, Points, TEXT("名"));
 }
 
@@ -1005,22 +1109,30 @@ void ANightSchoolDirector::TryOpenGrade()
 		Door->OpenDoor();
 	}
 	SpawnNoticeGhost();
-	ShowStatus(TEXT("年级组的门开了。北廊在它里面再往北。长榜还要再盖一枚章。"), 8.f);
+	ShowStatus(TEXT("北廊在年级组里面。看完北廊的告示，再回宿舍楼上三楼找长榜。"), 8.f);
 }
 
 void ANightSchoolDirector::BuildRooms()
 {
 	RoomViews.Reset();
-	auto AddRoom = [this](const TCHAR* Id, float MinX, float MinY, float MaxX, float MaxY, const TCHAR* Name)
+	auto AddRoom = [this](const TCHAR* Id, float MinX, float MinY, float MaxX, float MaxY,
+		const TCHAR* Name, int32 Floor = 0, bool bShowPreview = true)
 	{
 		FNightRoomView Room;
 		Room.Id = FName(Id);
 		Room.Name = Name;
-		Room.Bounds = FBox(W(MinX, MinY, -50.f), W(MaxX, MaxY, 400.f));
+		Room.Bounds = FBox(NightSchool::AtFloor(MinX, MinY, 40.f, Floor),
+			NightSchool::AtFloor(MaxX, MaxY, 346.f, Floor));
+		Room.bShowPreview = bShowPreview;
 		RoomViews.Add(Room);
 	};
-	AddRoom(TEXT("Ante"), -1050.f, -550.f, 250.f, -50.f, TEXT("前厅"));
-	AddRoom(TEXT("Dorm"), -1050.f, 50.f, -350.f, 750.f, TEXT("宿舍"));
+	AddRoom(TEXT("DormExterior"), 327.f, -1290.f, 2200.f, -30.f, TEXT("宿舍楼外"));
+	AddRoom(TEXT("Ante"), -1050.f, -550.f, 274.f, -50.f, TEXT("前厅"));
+	AddRoom(TEXT("StoragePassage"), -1050.f, 50.f, -350.f, 750.f, TEXT("储物过道"), 0, false);
+	AddRoom(TEXT("Stair1"), -1616.f, -580.f, -1090.f, -430.f, TEXT("宿舍楼梯"), 0, false);
+	AddRoom(TEXT("Stair2"), -2220.f, -582.f, -320.f, -433.f, TEXT("二楼平台"), 1, false);
+	AddRoom(TEXT("Stair3"), -2220.f, -582.f, -320.f, -433.f, TEXT("三楼平台"), 2, false);
+	AddRoom(TEXT("Dorm"), -1050.f, 50.f, -350.f, 750.f, TEXT("203 宿舍"), 1);
 	AddRoom(TEXT("Duty"), -1050.f, -1350.f, -400.f, -650.f, TEXT("值班室"));
 	AddRoom(TEXT("Laundry"), -280.f, -1350.f, 250.f, -650.f, TEXT("洗衣间"));
 	AddRoom(TEXT("Call"), -2150.f, -1350.f, -1150.f, -650.f, TEXT("通话间"));
@@ -1033,7 +1145,7 @@ void ANightSchoolDirector::BuildRooms()
 	AddRoom(TEXT("Grade"), 950.f, 850.f, 1550.f, 1350.f, TEXT("年级组"));
 	AddRoom(TEXT("Computer"), 1680.f, 850.f, 2150.f, 1350.f, TEXT("微机室"));
 	AddRoom(TEXT("Notice"), 980.f, 1480.f, 2150.f, 1850.f, TEXT("北廊"));
-	AddRoom(TEXT("Annex"), 980.f, 1980.f, 2150.f, 2620.f, TEXT("长榜"));
+	AddRoom(TEXT("Annex"), -2180.f, 62.f, -1200.f, 750.f, TEXT("长榜展室"), 2);
 	AddRoom(TEXT("Infirmary"), -250.f, 1050.f, 250.f, 1550.f, TEXT("校医室"));
 	AddRoom(TEXT("Light"), 350.f, 1480.f, 850.f, 1850.f, TEXT("光"));
 	AddRoom(TEXT("Closet"), -750.f, 1480.f, -350.f, 1850.f, TEXT("柜子"));
@@ -1041,12 +1153,33 @@ void ANightSchoolDirector::BuildRooms()
 	AddRoom(TEXT("Tool"), -1050.f, -2500.f, -530.f, -1480.f, TEXT("工具间"));
 	AddRoom(TEXT("Porch"), 2380.f, 40.f, 2840.f, 760.f, TEXT("门廊"));
 	AddRoom(TEXT("Shed"), 2960.f, 40.f, 3460.f, 760.f, TEXT("车棚"));
-	AddRoom(TEXT("Read"), 2960.f, 880.f, 3460.f, 1520.f, TEXT("旧阅览"));
+	AddRoom(TEXT("Read"), -980.f, 58.f, -445.f, 735.f, TEXT("旧阅览室"), 2);
 }
 
 void ANightSchoolDirector::BuildSelfFigure()
 {
 	const FVector Feet = W(620.f, 1788.f, 40.f);
+	if (SelfRig)
+	{
+		USkeletalMeshComponent* Figure = NewObject<USkeletalMeshComponent>(this);
+		Figure->SetupAttachment(GetRootComponent());
+		Figure->SetSkeletalMeshAsset(SelfRig);
+		Figure->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Figure->RegisterComponent();
+		Figure->SetWorldLocationAndRotation(Feet, FRotator(0.f, -90.f, 0.f));
+		return;
+	}
+	if (SelfModel)
+	{
+		UStaticMeshComponent* Figure = NewObject<UStaticMeshComponent>(this);
+		Figure->SetupAttachment(GetRootComponent());
+		Figure->SetMobility(EComponentMobility::Movable);
+		Figure->SetStaticMesh(SelfModel);
+		Figure->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Figure->RegisterComponent();
+		Figure->SetWorldLocationAndRotation(Feet, FRotator(0.f, -90.f, 0.f));
+		return;
+	}
 	const FLinearColor Skin(0.62f, 0.45f, 0.36f);
 	const FLinearColor Hair(0.06f, 0.05f, 0.045f);
 	const FLinearColor Jacket(0.12f, 0.18f, 0.32f);
@@ -1093,10 +1226,27 @@ void ANightSchoolDirector::TickPreview(float DeltaSeconds)
 			const float Span = PreviewDuration / static_cast<float>(PreviewPoints.Num() - 1);
 			const int32 Last = PreviewPoints.Num() - 2;
 			const int32 Segment = FMath::Clamp(FMath::FloorToInt(PreviewTime / Span), 0, Last);
-			const float Alpha = FMath::Clamp((PreviewTime - Segment * Span) / Span, 0.f, 1.f);
-			const FVector Loc = FMath::Lerp(PreviewPoints[Segment], PreviewPoints[Segment + 1], Alpha);
+			const float LinearAlpha = FMath::Clamp((PreviewTime - Segment * Span) / Span, 0.f, 1.f);
+			const bool bHasMovingSubject = PreviewLookPoints.Num() == PreviewPoints.Num();
+			const float Alpha = bHasMovingSubject ? FMath::InterpEaseInOut(0.f, 1.f, LinearAlpha, 1.7f) : LinearAlpha;
+			const FVector Next = FMath::Lerp(PreviewPoints[Segment], PreviewPoints[Segment + 1], Alpha);
+			const FVector From = PreviewCamera->GetActorLocation();
+			const FVector LookAt = bHasMovingSubject
+				? FMath::Lerp(PreviewLookPoints[Segment], PreviewLookPoints[Segment + 1], Alpha)
+				: PreviewLook;
+			FVector Loc = Next;
+			if (!From.Equals(Next, 0.1))
+			{
+				FHitResult Hit;
+				FCollisionQueryParams Params(SCENE_QUERY_STAT(NightRoomPreview), false, Current);
+				if (GetWorld()->SweepSingleByChannel(Hit, From, Next, FQuat::Identity, ECC_Camera,
+					FCollisionShape::MakeSphere(16.f), Params))
+				{
+					Loc = Hit.bStartPenetrating ? From : Hit.Location;
+				}
+			}
 			PreviewCamera->SetActorLocation(Loc);
-			PreviewCamera->SetActorRotation((PreviewLook - Loc).Rotation());
+			PreviewCamera->SetActorRotation((LookAt - Loc).Rotation());
 		}
 		if (PreviewTime >= PreviewDuration)
 		{
@@ -1104,7 +1254,7 @@ void ANightSchoolDirector::TickPreview(float DeltaSeconds)
 			PreviewReturnLeft = 0.55f;
 			if (APlayerController* Controller = UGameplayStatics::GetPlayerController(this, 0))
 			{
-				Controller->SetViewTargetWithBlend(Current, 0.45f, VTBlend_Cubic, 0.f, false);
+				Controller->SetViewTarget(Current);
 			}
 		}
 		return;
@@ -1139,8 +1289,13 @@ void ANightSchoolDirector::TryBeginPreview()
 	for (int32 Index = 0; Index < RoomViews.Num(); ++Index)
 	{
 		FNightRoomView& Room = RoomViews[Index];
-		if (Room.bSeen || !Room.Bounds.IsInsideXY(Loc))
+		if (Room.bSeen || !Room.Bounds.IsInside(Loc))
 		{
+			continue;
+		}
+		if (!Room.bShowPreview)
+		{
+			Room.bSeen = true;
 			continue;
 		}
 		const FVector Extent = Room.Bounds.GetExtent();
@@ -1185,31 +1340,68 @@ void ANightSchoolDirector::BeginRoomPreview(FNightRoomView& Room)
 	{
 		return;
 	}
-	const float EyeZ = NightSchool::Origin().Z + 190.f;
-	const float Width = Room.Bounds.Max.X - Room.Bounds.Min.X;
-	const float Depth = Room.Bounds.Max.Y - Room.Bounds.Min.Y;
-	const float InsetX = FMath::Clamp(Width * 0.18f, 36.f, 90.f);
-	const float InsetY = FMath::Clamp(Depth * 0.18f, 36.f, 90.f);
-	const float X0 = Room.Bounds.Min.X + InsetX;
-	const float X1 = Room.Bounds.Max.X - InsetX;
-	const float Y0 = Room.Bounds.Min.Y + InsetY;
-	const float Y1 = Room.Bounds.Max.Y - InsetY;
-	PreviewPoints.Reset();
-	PreviewPoints.Add(FVector(X0, Y0, EyeZ));
-	PreviewPoints.Add(FVector(X1, Y0, EyeZ));
-	PreviewPoints.Add(FVector(X1, Y1, EyeZ));
-	PreviewPoints.Add(FVector(X0, Y1, EyeZ));
-	PreviewPoints.Add(FVector(X0, Y0, EyeZ));
-	const FVector Center = Room.Bounds.GetCenter();
-	PreviewLook = FVector(Center.X, Center.Y, EyeZ - 50.f);
+	PreviewLookPoints.Reset();
+	const bool bExterior = Room.Id == TEXT("DormExterior");
+	PreviewCamera->GetCameraComponent()->SetFieldOfView(76.f);
+	if (bExterior)
+	{
+		PreviewPoints = {W(1720.f, -705.f, 245.f), W(1205.f, -542.f, 240.f),
+			W(896.f, -418.f, 215.f), W(696.f, -344.f, 207.f)};
+		PreviewLookPoints = {W(875.f, -569.f, 537.f), W(325.f, -258.f, 319.f),
+			W(318.f, -305.f, 237.f), W(322.f, -305.f, 224.f)};
+		PreviewLook = PreviewLookPoints[0];
+		PreviewDuration = 8.8f;
+		PreviewCaption = TEXT("夜深了。宿舍门口还亮着一盏灯。按 Tab 跳过。");
+	}
+	else if (Room.Id == TEXT("Ante"))
+	{
+		PreviewPoints = {W(205.f, -310.f, 174.f), W(-124.f, -333.f, 174.f), W(-548.f, -368.f, 170.f)};
+		PreviewLookPoints = {W(-165.f, -530.f, 128.f), W(-694.f, -388.f, 130.f),
+			W(-1100.f, NightSchool::StairEntryY, 153.f)};
+		PreviewLook = PreviewLookPoints[0];
+		PreviewDuration = 6.2f;
+		PreviewCaption = TEXT("一楼前厅。接待柜靠南墙，去 203 宿舍要走西侧楼梯。按 Tab 跳过。");
+	}
+	else if (Room.Id == TEXT("Dorm"))
+	{
+		using NightSchool::Dorm;
+		PreviewPoints = {Dorm(-695.f, 73.f, 174.f), Dorm(-626.f, 232.f, 170.f), Dorm(-619.f, 420.f, 172.f)};
+		PreviewLookPoints = {Dorm(-976.f, 220.f, 116.f), Dorm(-886.f, 470.f, 123.f), Dorm(-751.f, 676.f, 153.f)};
+		PreviewLook = PreviewLookPoints[0];
+		PreviewDuration = 5.8f;
+		PreviewCaption = TEXT("二楼 203。床头柜上的手机还亮着。按 Tab 跳过。");
+	}
+	else
+	{
+		const double EyeZ = Room.Bounds.Min.Z + 137.0;
+		const float Width = Room.Bounds.Max.X - Room.Bounds.Min.X;
+		const float Depth = Room.Bounds.Max.Y - Room.Bounds.Min.Y;
+		const float InsetX = FMath::Clamp(Width * 0.18f, 36.f, 90.f);
+		const float InsetY = FMath::Clamp(Depth * 0.18f, 36.f, 90.f);
+		const float X0 = Room.Bounds.Min.X + InsetX;
+		const float X1 = Room.Bounds.Max.X - InsetX;
+		const float Y0 = Room.Bounds.Min.Y + InsetY;
+		const float Y1 = Room.Bounds.Max.Y - InsetY;
+		PreviewPoints = {FVector(X0, Y0, EyeZ), FVector(X1, Y1, EyeZ)};
+		const FVector Center = Room.Bounds.GetCenter();
+		PreviewLook = FVector(Center.X, Center.Y, EyeZ - 50.f);
+		PreviewDuration = 5.8f;
+		PreviewCaption = FString::Printf(TEXT("第一次走进%s。镜头把这间屋走一遍。按 Tab 跳过。"), *Room.Name);
+	}
 	PreviewTime = 0.f;
-	PreviewDuration = 10.f;
 	bPreviewReturning = false;
 	bPreviewing = true;
-	PreviewCaption = FString::Printf(TEXT("第一次走进%s。镜头把这间屋走一遍。按 Tab 跳过。"), *Room.Name);
-	PreviewCamera->SetActorLocation(PreviewPoints[0]);
-	PreviewCamera->SetActorRotation((PreviewLook - PreviewPoints[0]).Rotation());
-	Controller->SetViewTargetWithBlend(PreviewCamera, 0.35f, VTBlend_Cubic, 0.f, false);
+	FVector Start = PreviewPoints[0];
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(NightRoomPreviewStart), false, Current);
+	if (World->OverlapBlockingTestByChannel(Start, FQuat::Identity, ECC_Camera, FCollisionShape::MakeSphere(16.f), Params))
+	{
+		FRotator EyeRotation;
+		Current->GetActorEyesViewPoint(Start, EyeRotation);
+		PreviewPoints[0] = Start;
+	}
+	PreviewCamera->SetActorLocation(Start);
+	PreviewCamera->SetActorRotation((PreviewLook - Start).Rotation());
+	Controller->SetViewTarget(PreviewCamera);
 	Current->SetPreviewing(true);
 }
 
@@ -1226,7 +1418,7 @@ bool ANightSchoolDirector::AnyGhostContains(const FVector& Point) const
 {
 	for (const TObjectPtr<ANightSchoolApparition>& Ghost : Apparitions)
 	{
-		if (Ghost && Ghost->ContainsXY(Point))
+		if (Ghost && Ghost->Contains(Point))
 		{
 			return true;
 		}
@@ -1295,18 +1487,11 @@ void ANightSchoolDirector::Tick(float DeltaSeconds)
 	FearLock = FMath::Max(0.f, FearLock - DeltaSeconds);
 	GrantSeals();
 	EnsureOpeningCheckpoint();
-	const int32 ChapterNow = GetChapterIndex();
-	if (ChapterNow != ShownChapter)
-	{
-		ShownChapter = ChapterNow;
-		ChapterBanner = NightSchoolStory::ChapterBanner(ChapterNow);
-		ChapterBannerTime = 7.f;
-	}
-	ChapterBannerTime = FMath::Max(0.f, ChapterBannerTime - DeltaSeconds);
 	PreviewHold = FMath::Max(0.f, PreviewHold - DeltaSeconds);
 	TickPreview(DeltaSeconds);
 	TryBeginPreview();
 	TickPuzzle(DeltaSeconds);
+	TickCampus(Time, DeltaSeconds);
 	if (!IsEnding() && !bNoteOpen && !bPreviewing)
 	{
 		LureTime = FMath::Max(0.f, LureTime - DeltaSeconds);
@@ -1342,7 +1527,8 @@ bool ANightSchoolDirector::IsInWarmLight(const FVector& Location) const
 {
 	for (const FVector& Lamp : WarmLights)
 	{
-		if (FVector::DistSquared(Location, Lamp) <= FMath::Square(480.f))
+		if (NightSchool::FloorAt(Location) == NightSchool::FloorAt(Lamp)
+			&& FVector::DistSquared(Location, Lamp) <= FMath::Square(480.f))
 		{
 			return true;
 		}
@@ -1408,171 +1594,6 @@ ANightSchoolCharacter* ANightSchoolDirector::Player() const
 	return Cast<ANightSchoolCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
 }
 
-FString ANightSchoolDirector::GetObjective() const
-{
-	if (IsEnding())
-	{
-		return FString();
-	}
-	if (!bPhoneRead)
-	{
-		return TEXT("西边是宿舍。先看那只每天都响的手机。每间屋有一座红印台，按 G 记下。解不开就从上一座再来。");
-	}
-	if (CallCount() < 3)
-	{
-		return TEXT("值班室西边是通话间。三页通话记录要读完。");
-	}
-	if (DutyCount() < 3)
-	{
-		return TEXT("南边值班室有老吴的三页记录。读完，再开那只抽屉。");
-	}
-	if (!bPuzzle1)
-	{
-		return TEXT("通话间墙上写着三个数字。把三环转到那三个数。按下去之后它们会走过来。八十秒，拨不完就退回印台。");
-	}
-	if (!bHasCloth && !bCameraCovered)
-	{
-		return TEXT("镜头布在值班室抽屉里。宿舍北墙那只眼睛还亮着。");
-	}
-	if (!bCameraCovered)
-	{
-		return TEXT("把布盖上宿舍的镜头。章印会回到你身上。");
-	}
-	if (!bSeal1Set)
-	{
-		return TEXT("把第一章的章印按到前厅木板上。走廊这时才开。");
-	}
-	if (NoteCount() < 4)
-	{
-		if (!bPuzzle7)
-		{
-			return TEXT("第四张条子在小卖部。铁盒先要拨三个环：甲在前厅，乙在洗衣间，丙在南甬。人会在宿舍里走。八十秒。");
-		}
-		if (!bNoteShop && !bShopOpen)
-		{
-			return TEXT("江晚的条子在空位旁、走廊和储物柜。第四张在小卖部，宿舍铁盒里的硬币能把卷帘送上去。");
-		}
-		return TEXT("江晚的条子还没齐：空位旁、走廊、小卖部柜台、储物柜。");
-	}
-	if (ClassCount() < 3)
-	{
-		return TEXT("教室里还有三页班级日志。看完再坐那张空位。");
-	}
-	if (!bPuzzle2)
-	{
-		return TEXT("教室墙上有三个数字。空位上的人还在走。八十秒。");
-	}
-	if (!bSatAlone)
-	{
-		return TEXT("条子和日志都齐了。在那张没有人肯同桌的空位上坐下。");
-	}
-	if (!bSeal2Set)
-	{
-		return TEXT("把第二章的章印盖到值班室。然后才能钉账。");
-	}
-	if (!bShopOpen)
-	{
-		return TEXT("宿舍铁盒里的硬币能打开东边小卖部。那不是请客。");
-	}
-	if (ReceiptCount() < 3)
-	{
-		return TEXT("卷帘后面还有后仓。三张收据看完，账本才肯被拿走。");
-	}
-	if (!bPuzzle3)
-	{
-		return TEXT("小卖部墙上有三个数字。账还在货架之间。八十秒。");
-	}
-	if (!bLedgerPosted)
-	{
-		if (!bLedgerHeld)
-		{
-			return TEXT("柜台下的账本现在可以拿。");
-		}
-		return TEXT("把账本钉到走廊的布告栏上。");
-	}
-	if (!bSeal3Set)
-	{
-		return TEXT("把第三章的章印盖进西边通话间。办公室才收卷子。");
-	}
-	if (!bHasExam && !bExamGiven)
-	{
-		return TEXT("旧试卷在教室那张桌子上。");
-	}
-	if (!bExamGiven || !bOfficeOpen)
-	{
-		if (!bPuzzle8)
-		{
-			return TEXT("走廊还有一组环。甲在教室，乙在通话间，丙在小卖部。拨完，再把卷子交到办公室门口。");
-		}
-		return TEXT("空位、账本、章印都齐了。把试卷交到办公室门口。藏进抽屉不算。");
-	}
-	if (DraftCount() < 3)
-	{
-		return TEXT("办公室里有三页改卷批注。看完，年级组才开。");
-	}
-	if (!bPuzzle4)
-	{
-		return TEXT("办公室墙上有三个数字。这间屋会进来人。八十秒。");
-	}
-	if (!bTeacherRead)
-	{
-		return TEXT("读梁老师留在桌上的那张字条。");
-	}
-	if (MinutesCount() < 3)
-	{
-		return TEXT("年级组里有三页会议记录。");
-	}
-	if (!bSeal4Set)
-	{
-		return TEXT("把第四章的章印盖回教室那张空位。长榜才会开。");
-	}
-	if (NoticeCount() < 8)
-	{
-		return TEXT("北廊四张，再往北的长榜还有四张。八张都要看。");
-	}
-	if (!bPuzzle5)
-	{
-		return TEXT("长榜墙上有三个数字。榜上的人还在走。八十秒。");
-	}
-	if (!bSeal5Set)
-	{
-		return TEXT("把第五章的章印送回宿舍那只已经盖住的镜头旁边。");
-	}
-	if (!bInfirmaryOpen)
-	{
-		return TEXT("回走廊，往北进校医室。");
-	}
-	if (ChartCount() < 3)
-	{
-		return TEXT("校医室有三页旧病历。先看完，再叫周先生。");
-	}
-	if (!bZhouIntro)
-	{
-		return TEXT("去听周先生说话。两扇门他还不会一次说完。");
-	}
-	if (!bItemsReturned)
-	{
-		return TEXT("铅笔盒在储物柜，月票在微机室，课表在南边洗衣间。三样放到托盘上。");
-	}
-	if (!bPuzzle6)
-	{
-		return TEXT("校医室墙上有三个数字。柜开着的时候有人进来。八十秒。");
-	}
-	if (!bZhouHeard)
-	{
-		return TEXT("再去听周先生把两扇门说完。");
-	}
-	if (bWearingEarplugs)
-	{
-		return TEXT("光的开关要先回宿舍拿下耳塞。");
-	}
-	if (!bSawSelf)
-	{
-		return TEXT("光里站着一个人。先看清他。然后拨开关，或者去西边的柜子。");
-	}
-	return TEXT("用手拨开关离开，或从柜子里面把门带上。作文和东边的自习页都可以不放。南甬、工具间、车棚不改变这两扇门。");
-}
-
 int32 ANightSchoolDirector::GetChapterIndex() const
 {
 	if (!bSeal1Set)
@@ -1591,73 +1612,16 @@ int32 ANightSchoolDirector::GetChapterIndex() const
 	{
 		return 4;
 	}
-	if (!(NoticeCount() >= 8 && bSeal5Set))
+	if (!(NoticeCount() >= 8 && bPuzzle5 && bSeal5Set))
 	{
 		return 5;
 	}
 	return 6;
 }
 
-FString ANightSchoolDirector::GetChapterLine() const
-{
-	FString Line;
-	switch (GetChapterIndex())
-	{
-	case 1: Line = TEXT("第一章  未接"); break;
-	case 2: Line = TEXT("第二章  空位"); break;
-	case 3: Line = TEXT("第三章  请客"); break;
-	case 4: Line = TEXT("第四章  恨铁"); break;
-	case 5: Line = TEXT("第五章  榜"); break;
-	default: Line = TEXT("第六章  两扇门"); break;
-	}
-	if (ChapterBannerTime > 0.f && !ChapterBanner.IsEmpty())
-	{
-		Line += TEXT("\n");
-		Line += ChapterBanner;
-	}
-	return Line;
-}
-
 FString ANightSchoolDirector::GetPreviewLine() const
 {
 	return bPreviewing ? PreviewCaption : FString();
-}
-
-FString ANightSchoolDirector::GetPuzzleLine() const
-{
-	if (ActivePuzzle < 0)
-	{
-		return FString();
-	}
-	return FString::Printf(TEXT("还剩 %d 秒。人在往这边走。拨不完就退回印台。"), FMath::CeilToInt(PuzzleTime));
-}
-
-FString ANightSchoolDirector::GetFacingLine() const
-{
-	TArray<FString> Parts;
-	if (bPhoneRead) Parts.Add(TEXT("电话"));
-	if (bCameraCovered) Parts.Add(TEXT("镜头"));
-	if (bSatAlone) Parts.Add(TEXT("空位"));
-	if (bExamGiven) Parts.Add(TEXT("交卷"));
-	if (bTeacherRead) Parts.Add(TEXT("字条"));
-	if (bZhouHeard) Parts.Add(TEXT("周先生"));
-	if (bLightOpen) Parts.Add(TEXT("光门已开"));
-	if (bClosetOpen) Parts.Add(TEXT("柜门已开"));
-	if (bWearingEarplugs) Parts.Add(TEXT("耳塞还戴着"));
-	if (Parts.Num() == 0)
-	{
-		return TEXT("还没开始");
-	}
-	FString Line;
-	for (int32 Index = 0; Index < Parts.Num(); ++Index)
-	{
-		if (Index > 0)
-		{
-			Line += TEXT("、");
-		}
-		Line += Parts[Index];
-	}
-	return Line;
 }
 
 FString ANightSchoolDirector::GetItemsLine() const
@@ -1685,97 +1649,6 @@ FString ANightSchoolDirector::GetItemsLine() const
 	if (!bEssaysKept && EssayCount() > 0) Append(TEXT("作文"));
 	if (bSeal1Held || bSeal2Held || bSeal3Held || bSeal4Held || bSeal5Held) Append(TEXT("章印"));
 	return Line.IsEmpty() ? TEXT("空的") : Line;
-}
-
-FString ANightSchoolDirector::GetThreadsLine() const
-{
-	const int32 Items = bItemsReturned ? 3 : ((bHasPencil ? 1 : 0) + (bHasBus ? 1 : 0) + (bHasTime ? 1 : 0));
-	FString Line = FString::Printf(
-		TEXT("通话 %d/3  值班 %d/3  条子 %d/4  日志 %d/3  收据 %d/3  批注 %d/3  会议 %d/3  告示 %d/8  病历 %d/3  旧物 %d/3  作文 %d/3"),
-		CallCount(),
-		DutyCount(),
-		NoteCount(),
-		ClassCount(),
-		ReceiptCount(),
-		DraftCount(),
-		MinutesCount(),
-		NoticeCount(),
-		ChartCount(),
-		Items,
-		EssayCount());
-	const int32 Rings = (bPuzzle1 ? 1 : 0) + (bPuzzle2 ? 1 : 0) + (bPuzzle3 ? 1 : 0) + (bPuzzle4 ? 1 : 0) + (bPuzzle5 ? 1 : 0) + (bPuzzle6 ? 1 : 0)
-		+ (bPuzzle7 ? 1 : 0) + (bPuzzle8 ? 1 : 0) + (bPuzzle9 ? 1 : 0) + (bPuzzle10 ? 1 : 0);
-	Line += FString::Printf(TEXT("  环 %d/10"), Rings);
-	if (!bStudyKept && StudyCount() > 0)
-	{
-		Line += FString::Printf(TEXT("  自习 %d/4"), StudyCount());
-	}
-	else if (bStudyKept)
-	{
-		Line += TEXT("  ·自习已放");
-	}
-	if (bCoin && !bCoinSpent)
-	{
-		Line += TEXT("  ·硬币");
-	}
-	if (bShopOpen)
-	{
-		Line += TEXT("  ·小卖部");
-	}
-	if (bLedgerPosted)
-	{
-		Line += TEXT("  ·账已钉");
-	}
-	else if (bLedgerHeld)
-	{
-		Line += TEXT("  ·账本");
-	}
-	if (bGradeOpen)
-	{
-		Line += TEXT("  ·年级组");
-	}
-	if (bComputerOpen)
-	{
-		Line += TEXT("  ·微机室");
-	}
-	if (bZhouIntro && !bZhouHeard)
-	{
-		Line += TEXT("  ·还没说完");
-	}
-	if (bSpareTaken)
-	{
-		Line += TEXT("  ·电池");
-	}
-	if (bEssaysKept)
-	{
-		Line += TEXT("  ·长凳");
-	}
-	if (bShopSodaTaken)
-	{
-		Line += TEXT("  ·第二瓶");
-	}
-	if (bStoreOpen)
-	{
-		Line += TEXT("  ·后仓");
-	}
-	if (bAnnexOpen)
-	{
-		Line += TEXT("  ·长榜");
-	}
-	if (bSawSelf)
-	{
-		Line += TEXT("  ·看见了");
-	}
-	if (bSeal1Set && bSeal2Set && bSeal3Set && bSeal4Set && bSeal5Set)
-	{
-		Line += TEXT("  ·五章已盖");
-	}
-	const int32 Awake = (bShopGhost ? 1 : 0) + (bNoticeGhost ? 1 : 0) + (bComputerGhost ? 1 : 0) + (bAnnexGhost ? 1 : 0);
-	if (Awake > 0 && Line.IsEmpty())
-	{
-		Line = TEXT("还有人在屋里走");
-	}
-	return Line;
 }
 
 void ANightSchoolDirector::OnCaughtByApparition()
@@ -1851,6 +1724,19 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		Prop->Consume();
 		ShowNote(TEXT("红点"), NightSchoolStory::CameraBody());
 		ShowStatus(TEXT("章印在你身上。按到前厅的木板上，走廊才开。"), 6.f);
+		break;
+	case ENightPropId::DormEntrance:
+		Prop->OpenDoor();
+		if (!bPhoneRead)
+		{
+			ShowStatus(TEXT("穿过前厅走西侧楼梯。二楼 203 的手机还亮着。"), 6.f);
+		}
+		break;
+	case ENightPropId::DormSignIn:
+		ShowNote(TEXT("宿舍签到表"), TEXT("晚归请在此登记。\n\n日期　房号　姓名　返楼时间\n\n下面几行已经洇湿。最末一栏留了个空格。"));
+		break;
+	case ENightPropId::DormAnnouncement:
+		ShowNote(TEXT("宿舍公告"), TEXT("本楼 22:30 熄灯。晚归请先在门口签到。\n\n熄灯后请勿在走廊逗留。听见敲门，请先确认门外是谁。\n\n宿舍管理室"));
 		break;
 	case ENightPropId::HallDoor:
 		if (!bSeal1Set)
@@ -2468,7 +2354,7 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		}
 		bSideOpen = true;
 		Prop->OpenDoor();
-		ShowStatus(TEXT("门廊黑着。车棚在更东边。旧阅览要等校医室开了再拨。"), 4.2f);
+		ShowStatus(TEXT("往东是车棚。三楼旧阅览室的钥匙线索在车棚的三只环里。"), 5.f);
 		break;
 	case ENightPropId::ShedDoor:
 		bShedOpen = true;
@@ -2477,7 +2363,7 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 	case ENightPropId::ReadDoor:
 		if (!bPuzzle9)
 		{
-			ShowNote(TEXT("旧阅览"), TEXT("车棚的环还没对上。甲在宿舍，乙在长榜，丙在校医室。数字不在这扇门上。"));
+			ShowNote(TEXT("旧阅览室"), TEXT("车棚的三只环还没对上。甲在二楼 203，乙在三楼长榜，丙在一楼校医室。"));
 			break;
 		}
 		TryOpenReadingRoom();
@@ -2534,6 +2420,9 @@ void ANightSchoolDirector::HandleProp(ANightSchoolProp* Prop)
 		break;
 	case ENightPropId::DialConfirm:
 		UseDialConfirm(Prop);
+		break;
+	case ENightPropId::DialClue:
+		ShowNote(TEXT("墙上的数字"), *Prop->GetMarker().ToString());
 		break;
 	default:
 		break;
